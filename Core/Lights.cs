@@ -1,5 +1,4 @@
-﻿using System.Xml.Linq;
-using Windows.UI;
+﻿using Windows.UI;
 using Windows.UI.Composition;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Hosting;
@@ -7,6 +6,9 @@ using Windows.UI.Xaml.Media;
 
 namespace XAMLComposition.Core;
 
+/// <summary>
+/// A simple ambient light to provide a base for SpotLight
+/// </summary>
 public class AmbLight : XamlLight
 {
     private static readonly string Id = typeof(AmbLight).FullName;
@@ -81,9 +83,17 @@ public class SimpleSpotLight : XamlLight
 
         // Define expression animation that relates light's offset to pointer position 
         CompositionPropertySet hoverPosition = ElementCompositionPreview.GetPointerPositionPropertySet(targetElement);
-        _lightPositionExpression = compositor.CreateExpressionAnimation("Vector3(hover.Position.X, hover.Position.Y, target.Size.Y / 2f)");
+        _lightPositionExpression = compositor.CreateExpressionAnimation("Vector3(hover.Position.X, hover.Position.Y, props.Height)");
         _lightPositionExpression.SetReferenceParameter("hover", hoverPosition);
         _lightPositionExpression.SetParameter("target", targetElement);
+        _lightPositionExpression.SetParameter("props", spotLight.Properties);
+
+        spotLight.Properties.InsertScalar("Height", 0);
+        spotLight.Properties.StartAnimation(
+            spotLight.Properties.CreateExpressionAnimation()
+                .SetTarget("Height")
+                .SetExpression("target.Size.Y / 2f")
+                .SetParameter("target", targetElement));
 
 
 

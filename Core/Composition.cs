@@ -1,10 +1,7 @@
-﻿using System.Linq.Expressions;
-using System.Xml.Linq;
-using Windows.Foundation;
+﻿using System.Reflection;
 using Windows.Foundation.Collections;
 using Windows.UI;
 using Windows.UI.Composition;
-using Windows.UI.WebUI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Hosting;
@@ -1153,7 +1150,14 @@ public static class Composition
         if (string.IsNullOrWhiteSpace(animation.Target))
             throw new ArgumentNullException("Animation has no target");
 
-        compositionObject.StartAnimation(animation.Target, animation);
+        try
+        {
+            compositionObject.StartAnimation(animation.Target, animation);
+        }
+        catch (Exception ex)
+        {
+            XAMLCore.Trace(ex.ToString());
+        }
     }
 
     public static void StartAnimation(this CompositionObject compositionObject, CompositionAnimationGroup animation)
@@ -1287,23 +1291,30 @@ public static class Composition
             typeof(Composition),
             new PropertyMetadata(null, (s, e) =>
             {
-                if (e.NewValue == e.OldValue || s is not FrameworkElement obj)
+                if (e.NewValue == e.OldValue || s is not DependencyObject obj)
                     return;
 
                 if (e.OldValue is XAMLAnimationCollection old)
                 {
-                    obj.Loaded -= Obj_Loaded;
-                    obj.Unloaded -= Obj_Unloaded;
+                    if (s is FrameworkElement f)
+                    {
+                        f.Loaded -= Obj_Loaded;
+                        f.Unloaded -= Obj_Unloaded;
+                    }
+                   
                     old.Detach(obj);
                 }
 
                 if (e.NewValue is XAMLAnimationCollection collection)
                 {
-                    obj.Loaded -= Obj_Loaded;
-                    obj.Unloaded -= Obj_Unloaded;
+                    if (s is FrameworkElement f)
+                    {
+                        f.Loaded -= Obj_Loaded;
+                        f.Unloaded -= Obj_Unloaded;
 
-                    obj.Loaded += Obj_Loaded;
-                    obj.Unloaded += Obj_Unloaded;
+                        f.Loaded += Obj_Loaded;
+                        f.Unloaded += Obj_Unloaded;
+                    }
 
                     collection.Attach(obj);
                 }
@@ -1530,6 +1541,7 @@ public static class Composition
             }
         }
 
+        XAMLCore.Trace($"Unable to insert property for key: {key}, value: {value}");
         return false;
     }
 }
@@ -1607,9 +1619,9 @@ public record class CubicBezierPoints
 
 public interface IXamlCompositionAnimationBase
 {
-    void Start(UIElement target);
+    void Start(object target);
 
-    void Stop(UIElement target);
+    void Stop(object target);
 }
 
 public enum UIElementReferenceType
@@ -1945,6 +1957,11 @@ public enum AnimationTarget
     CompositionObjectProperties
 }
 
+public interface ICompositionAnimationTarget
+{
+    CompositionObject GetCompositionAnimationTarget();
+}
+
 [ContentProperty(Name = nameof(Parameters))]
 [DependencyProperty<string>("Target")]
 [DependencyProperty<AnimationTarget>("AnimationTarget")]
@@ -2049,66 +2066,95 @@ public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompo
 
     /* Animation Control */
 
-    public virtual void Start(UIElement element)
+    static PropertyInfo _lightProperty = null;
+    static PropertyInfo _brushProperty = null;
+
+    protected CompositionObject GetAnimationObject(object o)
     {
-        if (element is not null)
+        if (o is ICompositionAnimationTarget i)
+            return i.GetCompositionAnimationTarget();
+
+        if (o is UIElement u)
         {
             if (this.Target == CompositionFactory.TRANSLATION)
-                element.EnableCompositionTranslation();
+                u.EnableCompositionTranslation();
 
-            // Cannot play if parameters are not set
-            if (Parameters
-                    .OfType<AnimationParameterBase>()
-                    .Any(p => p.IsValid is false || p.GetValue(p.GetValueProperty()) is null))
-                return;
+            return u.GetElementVisual();
+        }
 
-            // Cannot play blank target
-            if (Animation is CompositionAnimation ca && string.IsNullOrWhiteSpace(ca.Target))
-                return;
-            
-            if (element?.GetElementVisual() is Visual v)
-            {
-                if (AnimationTarget == AnimationTarget.CompositionObject)
-                {
-                    v.StartAnimation(Animation);
-                }
-                else if (AnimationTarget == AnimationTarget.CompositionObjectProperties)
-                {
-                    /* 
-                     * If the value has been set in XAML it's more than likely
-                     * been set as a string, because DefaultValue's type is object
-                     * and XAML doesn't know what else to do. So even if you set
-                     * DefaultValue="0" in XAML, it will not be read as a float/double/int,
-                     * but as a string with the value "0". 
-                     * Hence we need to send it through this method to try and parse an
-                     * appropriate value for it
-                     */
+        if (o is XamlLight light)
+        {
+            _lightProperty ??= light.GetType().GetProperty("CompositionLight",
+                BindingFlags.NonPublic | BindingFlags.Instance);
 
-                    if (Animation is CompositionAnimation cat
-                        && GetDefaultValueProperty() is DependencyProperty dp
-                        && GetValue(dp) is object defaultValue)
-                        Composition.TryInsertProperty(
-                            v.Properties,
-                            cat.Target,
-                            defaultValue,
-                            DefaultValueType,
-                            false);
+            return _lightProperty.GetValue(light) as CompositionLight;
+        }
+        
+        if (o is XamlCompositionBrushBase brush)
+        {
+            _brushProperty ??= brush.GetType().GetProperty("CompositionBrush",
+                BindingFlags.NonPublic | BindingFlags.Instance);
 
-                    v.Properties.StartAnimation(Animation);
-                }
-            }
+            return _brushProperty.GetValue(brush) as CompositionBrush;
+        }
+
+        return null;
+    }
+
+    public virtual void Start(object target)
+    {
+        if (GetAnimationObject(target) is not CompositionObject obj)
+            return;
+
+        // Cannot play if parameters are not set
+        if (Parameters
+                .OfType<AnimationParameterBase>()
+                .Any(p => p.IsValid is false || p.GetValue(p.GetValueProperty()) is null))
+            return;
+
+        // Cannot play blank target
+        if (Animation is CompositionAnimation ca && string.IsNullOrWhiteSpace(ca.Target))
+            return;
+
+        if (AnimationTarget == AnimationTarget.CompositionObjectProperties)
+        {
+            /* 
+             * If the value has been set in XAML it's more than likely
+             * been set as a string, because DefaultValue's type is object
+             * and XAML doesn't know what else to do. So even if you set
+             * DefaultValue="0" in XAML, it will not be read as a float/double/int,
+             * but as a string with the value "0". 
+             * Hence we need to send it through this method to try and parse an
+             * appropriate value for it
+             */
+
+            if (Animation is CompositionAnimation cat
+                && GetDefaultValueProperty() is DependencyProperty dp
+                && GetValue(dp) is object defaultValue)
+                Composition.TryInsertProperty(
+                    obj.Properties,
+                    cat.Target,
+                    defaultValue,
+                    DefaultValueType,
+                    false);
+
+            obj.Properties.StartAnimation(Animation);
+        }
+        else if (AnimationTarget == AnimationTarget.CompositionObject)
+        {
+            obj.StartAnimation(Animation);
         }
     }
 
-    public virtual void Stop(UIElement element)
+    public virtual void Stop(object target)
     {
-        if (element?.GetElementVisual() is Visual v)
-        {
-            if (AnimationTarget == AnimationTarget.CompositionObject)
-                v.StopAnimation(Animation);
-            else if (AnimationTarget == AnimationTarget.CompositionObjectProperties)
-                v.Properties.StopAnimation(Animation);
-        }
+        if (GetAnimationObject(target) is not CompositionObject o)
+            return;
+
+        if (AnimationTarget == AnimationTarget.CompositionObject)
+            o.StopAnimation(Animation);
+        else if (AnimationTarget == AnimationTarget.CompositionObjectProperties)
+            o.Properties.StopAnimation(Animation);
     }
 }
 
@@ -2215,7 +2261,8 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
         Trim();
 
         // Check if we're loaded first, otherwise x:Bind will not have run yet
-        if (VisualTreeHelper.GetParent(associatedObject) is null)
+        if (associatedObject is not XamlLight 
+            && VisualTreeHelper.GetParent(associatedObject) is null)
             return;
 
         if (associatedObject is FrameworkElement { IsLoaded: false })
@@ -2231,7 +2278,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
         foreach (DependencyObject item in this)
         {
             IXamlCompositionAnimationBase animation = (IXamlCompositionAnimationBase)item;
-            animation.Start(associatedObject as UIElement);
+            animation.Start(associatedObject);
         }
     }
 
@@ -2249,7 +2296,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
         foreach (DependencyObject item in this)
         {
             IXamlCompositionAnimationBase animation = (IXamlCompositionAnimationBase)item;
-            animation.Stop(associatedObject as UIElement);
+            animation.Stop(associatedObject);
         }
 
         // Trim the associated list to remove any dead references
@@ -2271,7 +2318,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
             foreach (var item in associated)
             {
                 foreach (IXamlCompositionAnimationBase behavior in this._oldCollection)
-                    behavior.Stop(item as UIElement);
+                    behavior.Stop(item);
             }
 
             this._oldCollection.Clear();
@@ -2279,7 +2326,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
             foreach (var item in associated)
             {
                 foreach (IXamlCompositionAnimationBase behavior in this)
-                    behavior.Start(item as UIElement);
+                    behavior.Start(item);
             }
 
             foreach (IXamlCompositionAnimationBase newItem in this.OfType<IXamlCompositionAnimationBase>())
@@ -2317,7 +2364,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
                 IXamlCompositionAnimationBase oldItem = this._oldCollection[eventIndex];
 
                 foreach (var a in associated)
-                    oldItem.Stop(a as UIElement);
+                    oldItem.Stop(a);
 
                 Detach(oldItem);
 
@@ -2332,7 +2379,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
                 oldItem = this._oldCollection[eventIndex];
 
                 foreach (var a in associated)
-                    oldItem.Stop(a as UIElement);
+                    oldItem.Stop(a);
 
                 this._oldCollection.RemoveAt(eventIndex);
                 Detach(oldItem);
@@ -2359,9 +2406,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
         //}
 
         if (associated != null)
-        {
-            animation.Start(associated as UIElement);
-        }
+            animation.Start(associated);
 
         return animation;
     }
@@ -2400,7 +2445,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
             var associated = _associated
              .Select(x => x.TryGetTarget(out DependencyObject target) ? target : null)
              .Where(x => x != null)
-             .OfType<UIElement>()
+             //.OfType<DependencyObject>()
              .ToList();
 
             AnimationUpdatedEventArgs ae = e as AnimationUpdatedEventArgs;
@@ -2414,7 +2459,8 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
                 }
 
                 // Skip if the item is not in the visual tree
-                if (VisualTreeHelper.GetParent(item) is null)
+                if (item is not XamlLight  
+                    && VisualTreeHelper.GetParent(item) is null)
                     continue; 
 
                 // Skip if item is not loaded, as x:Bind may not have run

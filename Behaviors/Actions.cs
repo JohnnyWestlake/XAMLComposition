@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xaml.Interactivity;
 using Windows.UI.Composition;
 using Windows.UI.Xaml;
+using Windows.UI.Xaml.Markup;
 using XAMLComposition.Core;
 
 namespace XAMLComposition.Behaviors;
@@ -75,5 +76,19 @@ public partial class SetPropertySetAction : DependencyObject, IAction
             // Unsupported target type
             return false;
         }
+    }
+}
+
+[ContentProperty(Name = nameof(Animations))]
+[DependencyProperty<XAMLAnimationCollection>("Animations")]
+[DependencyProperty<DependencyObject>("Target")]
+public partial class SetAnimationCollectionAction : DependencyObject, IAction
+{
+    public object Execute(object sender, object parameter)
+    {
+        if (Target is not null)
+            Composition.SetAnimations(Target, Animations);
+
+        return true;
     }
 }

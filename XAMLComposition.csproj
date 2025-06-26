@@ -120,7 +120,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Behaviors\SetPropertySetAction.cs" />
+    <Compile Include="Behaviors\Actions.cs" />
     <Compile Include="Controls\WrapPanel.cs" />
     <Compile Include="Core\Composition.cs" />
     <Compile Include="Core\CompositionExtensions.cs" />
@@ -128,7 +128,7 @@
     <Compile Include="Core\CompositionNaturalMotion.cs" />
     <Compile Include="Core\CompositionProperty.cs" />
     <Compile Include="Core\Properties.cs" />
-    <Compile Include="Core\SimpleSpotLight.cs" />
+    <Compile Include="Core\Lights.cs" />
     <Compile Include="Core\SourceGenAttributes.cs" />
     <Compile Include="Core\XAMLCore.cs" />
     <Compile Include="MainPage.xaml.cs">

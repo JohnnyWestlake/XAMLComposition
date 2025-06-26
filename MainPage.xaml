@@ -46,34 +46,85 @@
                         </i:Interaction.Behaviors>
                     </Slider>
 
+                    <Slider x:Name="Slider2" Maximum="40">
+                        <i:Interaction.Behaviors>
+                            <i:EventTriggerBehavior EventName="ValueChanged">
+                                <b:SetPropertySetAction
+                                    Key="Value"
+                                    DefaultValue="0"
+                                    Target="{x:Bind Slider2}"
+                                    Value="{Binding ElementName=Slider2, Path=Value}" />
+                            </i:EventTriggerBehavior>
+                        </i:Interaction.Behaviors>
+                    </Slider>
+
+                    <Slider
+                        x:Name="Slider3"
+                        LargeChange="0.01"
+                        Maximum="2"
+                        Minimum="0"
+                        SmallChange="0.01"
+                        StepFrequency="0.01"
+                        Value="1">
+                        <i:Interaction.Behaviors>
+                            <i:EventTriggerBehavior EventName="ValueChanged">
+                                <b:SetPropertySetAction
+                                    Key="Value"
+                                    DefaultValue="1"
+                                    Target="{x:Bind Slider3}"
+                                    Value="{Binding ElementName=Slider3, Path=Value}" />
+                            </i:EventTriggerBehavior>
+                        </i:Interaction.Behaviors>
+                    </Slider>
+
                     <Border
                         x:Name="Source"
                         Width="400"
                         Height="200"
                         Background="Green">
+                        <i:Interaction.Behaviors>
+                            <i:EventTriggerBehavior EventName="Loaded">
+                                <b:SetAnimationCollectionAction Target="{x:Bind Spotlight}">
+                                    <c:XAMLAnimationCollection>
+                                        <c:XAMLExpressionAnimation
+                                            AnimationTarget="CompositionObjectProperties"
+                                            Expression="p.Rotation"
+                                            Target="Height">
+                                            <c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
+                                        </c:XAMLExpressionAnimation>
+                                    </c:XAMLAnimationCollection>
+                                </b:SetAnimationCollectionAction>
+                            </i:EventTriggerBehavior>
+                        </i:Interaction.Behaviors>
                         <Border.Lights>
                             <c:AmbLight />
-                            <c:SimpleSpotLight />
+                            <c:SimpleSpotLight x:Name="Spotlight" />
                         </Border.Lights>
                         <c:Composition.Animations>
                             <c:CenterPointExpressionAnimation />
-                            <c:XAMLExpressionAnimation
+
+                            <c:XAMLExpressionAnimation Expression="Vector3(0, slider.Value, 0)" Target="Translation">
+                                <c:ElementVisualPropertySetParameter Key="slider" Element="{x:Bind Slider2}" />
+                            </c:XAMLExpressionAnimation>
+                            <!--<c:XAMLExpressionAnimation
                                 DefaultValue="45"
                                 Expression="p.Rotation"
-                                Target="RotationAngleInDegrees">
+                                Target="RotationAngleInDegrees">-->
 
-                                <!--
-                                    Both of these work, but the latter is more efficient if
-                                    the animation is being applied to many objects
-                                -->
 
-                                <!--<c:DoubleParameter
+                            <!--
+                                Both of these work, but the latter is more efficient if
+                                the animation is being applied to many objects
+                            -->
+
+                            <!--<c:DoubleParameter
                                     Key="Rotation"
                                     BindingMode="Live"
                                     Value="{x:Bind Slider.Value, Mode=OneWay}" />-->
 
-                                <c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
-                            </c:XAMLExpressionAnimation>
+
+                            <!--<c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
+                            </c:XAMLExpressionAnimation>-->
                             <c:XAMLExpressionAnimation
                                 AnimationTarget="CompositionObjectProperties"
                                 DefaultValue="0"
@@ -88,6 +139,28 @@
                         HorizontalAlignment="Center"
                         HorizontalSpacing="12"
                         VerticalSpacing="12">
+                        <FrameworkElement.Lights>
+                            <c:AmbLight />
+                            <c:SimpleSpotLight x:Name="Light2" />
+                        </FrameworkElement.Lights>
+                        <i:Interaction.Behaviors>
+                            <i:EventTriggerBehavior EventName="Loaded">
+                                <b:SetAnimationCollectionAction Target="{x:Bind Light2}">
+                                    <c:XAMLAnimationCollection>
+                                        <!--<c:XAMLExpressionAnimation
+                                            AnimationTarget="CompositionObjectProperties"
+                                            Expression="15"
+                                            Target="Height" />-->
+                                        <c:XAMLExpressionAnimation
+                                            AnimationTarget="CompositionObjectProperties"
+                                            Expression="p.Rotation"
+                                            Target="Height">
+                                            <c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
+                                        </c:XAMLExpressionAnimation>
+                                    </c:XAMLAnimationCollection>
+                                </b:SetAnimationCollectionAction>
+                            </i:EventTriggerBehavior>
+                        </i:Interaction.Behaviors>
                         <Panel.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="Width" Value="100" />
@@ -101,20 +174,30 @@
                                 <Setter Property="c:Composition.Animations">
                                     <Setter.Value>
                                         <c:XAMLAnimationCollection>
+
+                                            <c:XAMLExpressionAnimation Expression="props.Translation" Target="Translation">
+                                                <c:ElementVisualPropertySetParameter Key="props" Element="{x:Bind Source}" />
+                                            </c:XAMLExpressionAnimation>
+
+                                            <c:XAMLExpressionAnimation Expression="Vector3(props.Value, props.Value, 1)" Target="Scale">
+                                                <c:ElementVisualPropertySetParameter Key="props" Element="{x:Bind Slider3}" />
+                                            </c:XAMLExpressionAnimation>
+
                                             <!--<c:XAMLExpressionAnimation Expression="Vector3((p.Position.X/src.Size.X) * this.Target.Size.X, (p.Position.Y/src.Size.Y) * this.Target.Size.Y, 0)" Target="CenterPoint">
                                                 <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
                                                 <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
-                                            </c:XAMLExpressionAnimation>-->
-                                            <!--<c:XAMLExpressionAnimation Expression="srcProps.Rotation" Target="RotationAngleInDegrees">
+                                            </c:XAMLExpressionAnimation>
+                                            <c:XAMLExpressionAnimation Expression="srcProps.Rotation" Target="RotationAngleInDegrees">
                                                 <c:ElementVisualPropertySetParameter Key="srcProps" Element="{x:Bind Slider}" />
-                                            </c:XAMLExpressionAnimation>-->
-                                            <!--<c:XAMLExpressionAnimation Expression="Vector3(0.5 + (p.Position.X/src.Size.X),0.5 + (p.Position.Y/src.Size.Y),0)" Target="Scale">
+                                            </c:XAMLExpressionAnimation>
+                                            <c:XAMLExpressionAnimation Expression="Vector3(0.5 + (p.Position.X/src.Size.X),0.5 + (p.Position.Y/src.Size.Y),0)" Target="Scale">
                                                 <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
                                                 <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
                                             </c:XAMLExpressionAnimation>-->
 
 
                                             <!--  3D Tilt  -->
+
                                             <c:CenterPointExpressionAnimation />
 
                                             <c:XAMLExpressionAnimation Expression="{x:Bind RotationExpression()}" Target="RotationAngleInDegrees">
@@ -135,42 +218,42 @@
                         </Panel.Resources>
 
 
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
-                        <Border c:Properties.UseLights="True" />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
+                        <Border />
 
                     </controls:WrapPanel>
 
