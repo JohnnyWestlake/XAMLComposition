@@ -121,6 +121,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="Behaviors\Actions.cs" />
+    <Compile Include="Brushes\TintedBlurBrush.cs" />
     <Compile Include="Controls\WrapPanel.cs" />
     <Compile Include="Core\Composition.cs" />
     <Compile Include="Core\CompositionExtensions.cs" />
@@ -130,6 +131,7 @@
     <Compile Include="Core\Properties.cs" />
     <Compile Include="Core\Lights.cs" />
     <Compile Include="Core\SourceGenAttributes.cs" />
+    <Compile Include="Core\VisualProperties.cs" />
     <Compile Include="Core\XAMLCore.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
@@ -172,6 +174,9 @@
       <Version>1.15.0</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Win2D.uwp">
+      <Version>1.28.2</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

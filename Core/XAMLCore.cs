@@ -70,7 +70,7 @@ public static class XAMLCore
                 else if (parts.Length == 3 && FloatParse(parts[2], out float z))
                 {
                     value = (T)Convert.ChangeType(
-                        new Vector3(x, y, x), typeof(Vector3));
+                        new Vector3(x, y, z), typeof(Vector3));
                     return true;
                 }
             }
@@ -93,7 +93,7 @@ public static class XAMLCore
                 else if (parts.Length == 3 && FloatParse(parts[2], out float z))
                 {
                     value = (T)Convert.ChangeType(
-                        new Vector4(x, y, x, 1f), typeof(Vector4));
+                        new Vector4(x, y, z, 1f), typeof(Vector4));
                     return true;
                 }
                 else if (parts.Length == 4

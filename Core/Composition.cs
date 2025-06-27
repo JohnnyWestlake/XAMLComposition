@@ -2303,6 +2303,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
 
         // Check if we're loaded first, otherwise x:Bind will not have run yet
         if (associatedObject is not XamlLight 
+            && associatedObject is not XamlCompositionBrushBase
             && VisualTreeHelper.GetParent(associatedObject) is null)
             return;
 
@@ -2501,6 +2502,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
 
                 // Skip if the item is not in the visual tree
                 if (item is not XamlLight  
+                    && item is not XamlCompositionBrushBase
                     && VisualTreeHelper.GetParent(item) is null)
                     continue; 
 
@@ -2963,6 +2965,7 @@ public sealed partial class PropertyBinderCollection : DependencyObjectCollectio
 
                 // Skip if the item is not in the visual tree
                 if (item is not XamlLight
+                    && item is not XamlCompositionBrushBase
                     && VisualTreeHelper.GetParent(item) is null)
                     continue;
 

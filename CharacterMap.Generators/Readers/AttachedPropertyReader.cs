@@ -41,13 +41,13 @@ public class AttachedPropertyReader : SyntaxReader
                 var d = a.GetArgument("Name") is { } na && na.NameEquals is { } ne // Attribute property path,
                     ? src with
                     {
-                        Name = a.GetArgument("Name")?.GetValue(),
+                        Name = CleanName(a.GetArgument("Name")?.GetValue()),
                         Default = a.GetArgument("Default")?.GetValue() ?? "default",
                         Type = type ?? a.GetArgument("Type")?.GetValue()?.Replace("typeof(", string.Empty).Replace(")", string.Empty) ?? "object"
                     }
                     : src with // Constructor path - preferred
                     {
-                        Name = a.ArgumentList?.Arguments[0].GetValue() ?? type,
+                        Name = CleanName(a.ArgumentList?.Arguments[0].GetValue() ?? type),
                         Type = type ?? "object",
                         Default = a.ArgumentList?.Arguments.Skip(1)?.FirstOrDefault()?.GetValue() ?? "default"
                     };
@@ -55,6 +55,14 @@ public class AttachedPropertyReader : SyntaxReader
                 data.Add(d);
             }
         }
+    }
+
+    public static string CleanName(string s)
+    {
+        if (s is not null && s.StartsWith("nameof(") && s.EndsWith(")"))
+            return s[(s.IndexOf('.')+1)..^1];
+
+        return s;
     }
 
     public override void Write(GeneratorExecutionContext context)

@@ -1,8 +1,18 @@
-﻿using Windows.UI.Xaml;
+﻿using System.Collections;
+using Windows.UI.Xaml;
 using Windows.UI.Xaml.Data;
+using Windows.UI.Xaml.Markup;
 using Windows.UI.Xaml.Media;
 
 namespace XAMLComposition.Core;
+
+[MarkupExtensionReturnType(ReturnType = typeof(IList))]
+public class IntSampleSource : MarkupExtension
+{
+    public int Count { get; set; }
+
+    protected override object ProvideValue() => Enumerable.Range(0, 50).ToList();
+}
 
 
 [AttachedProperty<bool>("UseLights")]

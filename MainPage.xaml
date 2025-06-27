@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:b="using:XAMLComposition.Behaviors"
+    xmlns:brushes="using:XAMLComposition.Brushes"
     xmlns:c="using:XAMLComposition.Core"
     xmlns:controls="using:XAMLComposition.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -38,230 +39,346 @@
     </Page.Resources>
 
     <Grid>
-        <ScrollViewer x:Name="Scroller">
-            <Grid Height="2000">
-                <Grid.Background>
-                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-                        <GradientStop Color="#FF9BB3E6" />
-                        <GradientStop Offset="1" Color="#FF9FFF54" />
-                    </LinearGradientBrush>
-                </Grid.Background>
+        <Pivot>
+            <PivotItem Header="Basic Test">
+                <ScrollViewer x:Name="Scroller">
+                    <Grid Height="2000">
+                        <Grid.Background>
+                            <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                <GradientStop Color="#FF9BB3E6" />
+                                <GradientStop Offset="1" Color="#FF9FFF54" />
+                            </LinearGradientBrush>
+                        </Grid.Background>
 
 
-                <StackPanel c:CompositionFactory.EnableDepthMatrix="True" Spacing="12">
-                    <c:Composition.Animations>
-                        <!--
-                            As you scroll the ScrollViewer the content will not move as
-                            we bind it to the opposite of the ScrollViewer translation
-                        -->
-                        <c:XAMLExpressionAnimation Expression="Vector3(-scroll.Translation.X, -scroll.Translation.Y, 0)" Target="Translation">
-                            <c:ScrollManipulationSetParameter Key="scroll" Element="{x:Bind Scroller}" />
-                        </c:XAMLExpressionAnimation>
-                    </c:Composition.Animations>
-                    <Slider
-                        x:Name="Slider"
-                        Margin="4,0"
-                        Maximum="360"
-                        Value="66">
-                        <!--<c:Composition.PropertyBinders>
+                        <StackPanel c:CompositionFactory.EnableDepthMatrix="True" Spacing="12">
+                            <c:Composition.Animations>
+                                <!--
+                                    As you scroll the ScrollViewer the content will not move as
+                                    we bind it to the opposite of the ScrollViewer translation
+                                -->
+                                <c:XAMLExpressionAnimation Expression="Vector3(-scroll.Translation.X, -scroll.Translation.Y, 0)" Target="Translation">
+                                    <c:ScrollManipulationSetParameter Key="scroll" Element="{x:Bind Scroller}" />
+                                </c:XAMLExpressionAnimation>
+                            </c:Composition.Animations>
+                            <Slider
+                                x:Name="Slider"
+                                Margin="4,0"
+                                Maximum="360"
+                                Value="66">
+                                <!--<c:Composition.PropertyBinders>
                             <c:DPBinderBase Key="Rotation" Property="{x:Bind wuxc:Slider.ValueProperty}" />
                         </c:Composition.PropertyBinders>-->
-                    </Slider>
+                            </Slider>
 
-                    <Slider x:Name="Slider2" Maximum="40" />
+                            <Slider x:Name="Slider2" Maximum="40" />
 
-                    <Slider
-                        x:Name="Slider3"
-                        LargeChange="0.01"
-                        Maximum="2"
-                        Minimum="0"
-                        SmallChange="0.01"
-                        StepFrequency="0.01"
-                        Value="1" />
+                            <Slider
+                                x:Name="Slider3"
+                                LargeChange="0.01"
+                                Maximum="2"
+                                Minimum="0"
+                                SmallChange="0.01"
+                                StepFrequency="0.01"
+                                Value="1" />
 
-                    <Border
-                        x:Name="Source"
-                        Width="400"
-                        Height="200"
-                        Background="Green">
-                        <i:Interaction.Behaviors>
-                            <i:EventTriggerBehavior EventName="Loaded">
-                                <b:SetAnimationCollectionAction Target="{x:Bind Spotlight}">
-                                    <c:XAMLAnimationCollection>
-                                        <c:XAMLExpressionAnimation
-                                            AnimationTarget="CompositionObjectProperties"
-                                            Expression="p.Value"
-                                            Target="Height">
-                                            <c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
-                                        </c:XAMLExpressionAnimation>
-                                    </c:XAMLAnimationCollection>
-                                </b:SetAnimationCollectionAction>
-                            </i:EventTriggerBehavior>
-                        </i:Interaction.Behaviors>
-                        <Border.Lights>
-                            <c:AmbLight />
-                            <c:SimpleSpotLight x:Name="Spotlight" />
-                        </Border.Lights>
-                        <c:Composition.Animations>
-                            <c:CenterPointExpressionAnimation />
+                            <Border
+                                x:Name="Source"
+                                Width="400"
+                                Height="200"
+                                Background="Green">
+                                <i:Interaction.Behaviors>
+                                    <i:EventTriggerBehavior EventName="Loaded">
+                                        <b:SetAnimationCollectionAction Target="{x:Bind Spotlight}">
+                                            <c:XAMLAnimationCollection>
+                                                <c:XAMLExpressionAnimation
+                                                    AnimationTarget="CompositionObjectProperties"
+                                                    Expression="p.Value"
+                                                    Target="Height">
+                                                    <c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
+                                                </c:XAMLExpressionAnimation>
+                                            </c:XAMLAnimationCollection>
+                                        </b:SetAnimationCollectionAction>
+                                    </i:EventTriggerBehavior>
+                                </i:Interaction.Behaviors>
+                                <Border.Lights>
+                                    <c:AmbLight />
+                                    <c:SimpleSpotLight x:Name="Spotlight" />
+                                </Border.Lights>
+                                <c:Composition.Animations>
+                                    <c:CenterPointExpressionAnimation />
 
-                            <c:XAMLExpressionAnimation Expression="Vector3(0, slider.Value, 0)" Target="Translation">
-                                <c:ElementVisualPropertySetParameter Key="slider" Element="{x:Bind Slider2}" />
-                            </c:XAMLExpressionAnimation>
-                            <!--<c:XAMLExpressionAnimation
+                                    <c:XAMLExpressionAnimation Expression="Vector3(0, slider.Value, 0)" Target="Translation">
+                                        <c:ElementVisualPropertySetParameter Key="slider" Element="{x:Bind Slider2}" />
+                                    </c:XAMLExpressionAnimation>
+                                    <!--<c:XAMLExpressionAnimation
                                 DefaultValue="45"
                                 Expression="p.Rotation"
                                 Target="RotationAngleInDegrees">-->
 
 
-                            <!--
-                                Both of these work, but the latter is more efficient if
-                                the animation is being applied to many objects
-                            -->
+                                    <!--
+                                        Both of these work, but the latter is more efficient if
+                                        the animation is being applied to many objects
+                                    -->
 
-                            <!--<c:DoubleParameter
+                                    <!--<c:DoubleParameter
                                     Key="Rotation"
                                     BindingMode="Live"
                                     Value="{x:Bind Slider.Value, Mode=OneWay}" />-->
 
 
-                            <!--<c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
+                                    <!--<c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
                             </c:XAMLExpressionAnimation>-->
-                            <c:XAMLExpressionAnimation
-                                AnimationTarget="CompositionObjectProperties"
-                                DefaultValue="0"
-                                Expression="Sqrt(Square(src.Size.X / 2f) + Square(src.Size.Y / 2f))"
-                                Target="D2C">
-                                <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
+                                    <c:XAMLExpressionAnimation
+                                        AnimationTarget="CompositionObjectProperties"
+                                        DefaultValue="0"
+                                        Expression="Sqrt(Square(src.Size.X / 2f) + Square(src.Size.Y / 2f))"
+                                        Target="D2C">
+                                        <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
+                                    </c:XAMLExpressionAnimation>
+                                </c:Composition.Animations>
+                            </Border>
+
+                            <ItemsControl ItemsSource="{c:IntSampleSource Count=20}">
+                                <FrameworkElement.Resources>
+                                    <Style x:Key="Style" TargetType="Border">
+                                        <Setter Property="Width" Value="100" />
+                                        <Setter Property="Height" Value="100" />
+                                        <Setter Property="c:Properties.UseLights" Value="False" />
+                                        <Setter Property="Background">
+                                            <Setter.Value>
+                                                <SolidColorBrush Opacity="0.7" Color="Red" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="c:Composition.Animations">
+                                            <Setter.Value>
+                                                <c:XAMLAnimationCollection>
+
+                                                    <c:XAMLExpressionAnimation Expression="props.Translation" Target="Translation">
+                                                        <c:ElementVisualPropertySetParameter Key="props" Element="{Binding ElementName=Source}" />
+                                                    </c:XAMLExpressionAnimation>
+
+                                                    <c:XAMLExpressionAnimation Expression="Vector3(props.Value, props.Value, 1)" Target="Scale">
+                                                        <c:ElementVisualPropertySetParameter Key="props" Element="{Binding ElementName=Slider3}" />
+                                                    </c:XAMLExpressionAnimation>
+
+                                                    <!--<c:XAMLExpressionAnimation Expression="Vector3((p.Position.X/src.Size.X) * this.Target.Size.X, (p.Position.Y/src.Size.Y) * this.Target.Size.Y, 0)" Target="CenterPoint">
+                                                                         <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
+                                                                         <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
+                                                                     </c:XAMLExpressionAnimation>
+                                                                     <c:XAMLExpressionAnimation Expression="srcProps.Rotation" Target="RotationAngleInDegrees">
+                                                                         <c:ElementVisualPropertySetParameter Key="srcProps" Element="{x:Bind Slider}" />
+                                                                     </c:XAMLExpressionAnimation>
+                                                                     <c:XAMLExpressionAnimation Expression="Vector3(0.5 + (p.Position.X/src.Size.X),0.5 + (p.Position.Y/src.Size.Y),0)" Target="Scale">
+                                                                         <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
+                                                                         <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
+                                                                     </c:XAMLExpressionAnimation>-->
+
+
+                                                    <!--  3D Tilt  -->
+
+                                                    <c:CenterPointExpressionAnimation />
+
+                                                    <c:XAMLExpressionAnimation Expression="{StaticResource RotationExpression}" Target="RotationAngleInDegrees">
+                                                        <c:ElementVisualParameter Key="src" Element="{Binding ElementName=Source}" />
+                                                        <c:ElementVisualPropertySetParameter Key="props" Element="{Binding ElementName=Source}" />
+                                                        <c:PointerSetParameter Key="p" Element="{Binding ElementName=Source}" />
+                                                    </c:XAMLExpressionAnimation>
+
+                                                    <c:XAMLExpressionAnimation Expression="{StaticResource RotationAxisExpression}" Target="RotationAxis">
+                                                        <c:ElementVisualParameter Key="src" Element="{Binding ElementName=Source}" />
+                                                        <c:PointerSetParameter Key="p" Element="{Binding ElementName=Source}" />
+                                                    </c:XAMLExpressionAnimation>
+
+                                                </c:XAMLAnimationCollection>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </FrameworkElement.Resources>
+
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <controls:WrapPanel
+                                            HorizontalAlignment="Center"
+                                            HorizontalSpacing="12"
+                                            VerticalSpacing="12">
+                                            <Panel.ChildrenTransitions>
+                                                <TransitionCollection>
+                                                    <RepositionThemeTransition IsStaggeringEnabled="False" />
+                                                </TransitionCollection>
+                                            </Panel.ChildrenTransitions>
+                                            <FrameworkElement.Lights>
+                                                <c:AmbLight />
+                                                <c:SimpleSpotLight x:Name="Light2" />
+                                            </FrameworkElement.Lights>
+                                            <i:Interaction.Behaviors>
+                                                <i:EventTriggerBehavior EventName="Loaded">
+                                                    <b:SetAnimationCollectionAction Target="{Binding ElementName=Light2}">
+                                                        <c:XAMLAnimationCollection>
+                                                            <!--<c:XAMLExpressionAnimation
+                                                             AnimationTarget="CompositionObjectProperties"
+                                                             Expression="15"
+                                                             Target="Height" />-->
+                                                            <c:XAMLExpressionAnimation
+                                                                AnimationTarget="CompositionObjectProperties"
+                                                                Expression="p.Value"
+                                                                Target="Height">
+                                                                <c:ElementVisualPropertySetParameter Key="p" Element="{Binding ElementName=Slider}" />
+                                                            </c:XAMLExpressionAnimation>
+                                                        </c:XAMLAnimationCollection>
+                                                    </b:SetAnimationCollectionAction>
+                                                </i:EventTriggerBehavior>
+                                            </i:Interaction.Behaviors>
+                                        </controls:WrapPanel>
+
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource Style}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+
+            </PivotItem>
+
+            <PivotItem Header="Flip Test">
+                <Grid RowSpacing="40">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid.Resources>
+                        <c:XAMLAnimationCollection x:Key="FlipAnimations">
+                            <c:CenterPointExpressionAnimation Y="0" />
+
+                            <c:XAMLExpressionAnimation Expression="258 * (p.Position.Y / src.Size.Y)" Target="RotationAngleInDegrees">
+                                <c:PointerSetParameter Key="p" Element="{x:Bind FlipSource}" />
+                                <c:ElementVisualParameter Key="src" Element="{x:Bind FlipSource}" />
                             </c:XAMLExpressionAnimation>
-                        </c:Composition.Animations>
-                    </Border>
 
-                    <controls:WrapPanel
+                            <c:XAMLExpressionAnimation Expression="this.Target.RotationAngleInDegrees &gt; 255 ? false : true" Target="IsVisible" />
+
+                        </c:XAMLAnimationCollection>
+
+                        <brushes:TintedBlurBrush x:Name="BlurBrush" />
+
+                    </Grid.Resources>
+
+                    <StackPanel
+                        Grid.Row="1"
                         HorizontalAlignment="Center"
-                        HorizontalSpacing="12"
-                        VerticalSpacing="12">
-                        <FrameworkElement.Lights>
-                            <c:AmbLight />
-                            <c:SimpleSpotLight x:Name="Light2" />
-                        </FrameworkElement.Lights>
-                        <i:Interaction.Behaviors>
-                            <i:EventTriggerBehavior EventName="Loaded">
-                                <b:SetAnimationCollectionAction Target="{x:Bind Light2}">
-                                    <c:XAMLAnimationCollection>
-                                        <!--<c:XAMLExpressionAnimation
-                                            AnimationTarget="CompositionObjectProperties"
-                                            Expression="15"
-                                            Target="Height" />-->
-                                        <c:XAMLExpressionAnimation
-                                            AnimationTarget="CompositionObjectProperties"
-                                            Expression="p.Value"
-                                            Target="Height">
-                                            <c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
-                                        </c:XAMLExpressionAnimation>
-                                    </c:XAMLAnimationCollection>
-                                </b:SetAnimationCollectionAction>
-                            </i:EventTriggerBehavior>
-                        </i:Interaction.Behaviors>
-                        <Panel.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="Width" Value="100" />
-                                <Setter Property="Height" Value="100" />
-                                <Setter Property="c:Properties.UseLights" Value="False" />
-                                <Setter Property="Background">
-                                    <Setter.Value>
-                                        <SolidColorBrush Opacity="0.7" Color="Red" />
-                                    </Setter.Value>
-                                </Setter>
-                                <Setter Property="c:Composition.Animations">
-                                    <Setter.Value>
+                        Orientation="Horizontal"
+                        Spacing="40">
+                        <Border
+                            x:Name="FlipSource"
+                            Width="400"
+                            Height="200"
+                            Background="MediumPurple">
+                            <i:Interaction.Behaviors>
+                                <i:EventTriggerBehavior EventName="Loaded">
+                                    <b:SetAnimationCollectionAction Target="{x:Bind BlurBrush}">
                                         <c:XAMLAnimationCollection>
-
-                                            <c:XAMLExpressionAnimation Expression="props.Translation" Target="Translation">
-                                                <c:ElementVisualPropertySetParameter Key="props" Element="{x:Bind Source}" />
+                                            <c:XAMLExpressionAnimation
+                                                AnimationTarget="CompositionObjectProperties"
+                                                Expression="(p.Position.Y / src.Size.Y) * 6"
+                                                Target="BlurAmount">
+                                                <c:ElementVisualParameter Key="src" Element="{x:Bind BlurSource}" />
+                                                <c:PointerSetParameter Key="p" Element="{x:Bind BlurSource}" />
                                             </c:XAMLExpressionAnimation>
-
-                                            <c:XAMLExpressionAnimation Expression="Vector3(props.Value, props.Value, 1)" Target="Scale">
-                                                <c:ElementVisualPropertySetParameter Key="props" Element="{x:Bind Slider3}" />
-                                            </c:XAMLExpressionAnimation>
-
-                                            <!--<c:XAMLExpressionAnimation Expression="Vector3((p.Position.X/src.Size.X) * this.Target.Size.X, (p.Position.Y/src.Size.Y) * this.Target.Size.Y, 0)" Target="CenterPoint">
-                                                <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
-                                                <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
-                                            </c:XAMLExpressionAnimation>
-                                            <c:XAMLExpressionAnimation Expression="srcProps.Rotation" Target="RotationAngleInDegrees">
-                                                <c:ElementVisualPropertySetParameter Key="srcProps" Element="{x:Bind Slider}" />
-                                            </c:XAMLExpressionAnimation>
-                                            <c:XAMLExpressionAnimation Expression="Vector3(0.5 + (p.Position.X/src.Size.X),0.5 + (p.Position.Y/src.Size.Y),0)" Target="Scale">
-                                                <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
-                                                <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
-                                            </c:XAMLExpressionAnimation>-->
-
-
-                                            <!--  3D Tilt  -->
-
-                                            <c:CenterPointExpressionAnimation />
-
-                                            <c:XAMLExpressionAnimation Expression="{StaticResource RotationExpression}" Target="RotationAngleInDegrees">
-                                                <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
-                                                <c:ElementVisualPropertySetParameter Key="props" Element="{x:Bind Source}" />
-                                                <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
-                                            </c:XAMLExpressionAnimation>
-
-                                            <c:XAMLExpressionAnimation Expression="{StaticResource RotationAxisExpression}" Target="RotationAxis">
-                                                <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
-                                                <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
-                                            </c:XAMLExpressionAnimation>
-
                                         </c:XAMLAnimationCollection>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Panel.Resources>
+                                    </b:SetAnimationCollectionAction>
+                                </i:EventTriggerBehavior>
+                            </i:Interaction.Behaviors>
+
+                            <TextBlock
+                                Margin="20"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="18"
+                                Foreground="White"
+                                Text="Move pointer up and down here to rotate covers"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap" />
+                        </Border>
+
+                        <Border
+                            x:Name="BlurSource"
+                            Width="400"
+                            Height="200"
+                            Background="DarkOliveGreen">
+
+                            <TextBlock
+                                Margin="20"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="18"
+                                Foreground="White"
+                                Text="Move pointer up and down here to change cover blur"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap" />
+                        </Border>
+                    </StackPanel>
 
 
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
-                        <Border />
 
-                    </controls:WrapPanel>
 
-                </StackPanel>
+                    <ItemsControl Grid.Row="2" ItemsSource="{c:IntSampleSource Count=10}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid c:CompositionFactory.EnableDepthMatrix="True">
 
-            </Grid>
-        </ScrollViewer>
+                                    <Grid
+                                        Width="100"
+                                        Height="50"
+                                        Background="Red">
+
+                                        <TextBlock
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            FontSize="24"
+                                            FontWeight="ExtraBlack"
+                                            Foreground="White"
+                                            Text="Hello!" />
+                                    </Grid>
+
+
+                                    <Border
+                                        Width="100"
+                                        Height="50"
+                                        c:Composition.Animations="{StaticResource FlipAnimations}"
+                                        c:VisualProperties.BackfaceVisibility="Visible"
+                                        c:VisualProperties.RotationAxis="1 0 0"
+                                        Background="{StaticResource BlurBrush}"
+                                        BorderBrush="Green"
+                                        BorderThickness="4" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <controls:WrapPanel
+                                    HorizontalAlignment="Center"
+                                    HorizontalSpacing="24"
+                                    VerticalSpacing="24">
+                                    <Panel.ChildrenTransitions>
+                                        <TransitionCollection>
+                                            <RepositionThemeTransition IsStaggeringEnabled="False" />
+                                        </TransitionCollection>
+                                    </Panel.ChildrenTransitions>
+                                </controls:WrapPanel>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Grid>
+            </PivotItem>
+        </Pivot>
+
     </Grid>
 </Page>
