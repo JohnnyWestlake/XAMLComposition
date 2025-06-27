@@ -9,7 +9,6 @@ global using System.Threading.Tasks;
 
 global using Windows.Foundation;
 
-
 using Windows.ApplicationModel.Activation;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -18,16 +17,11 @@ namespace XAMLComposition;
 
 sealed partial class App : Application
 {
-    public App()
-    {
-        this.InitializeComponent();
-    }
-   
+    public App() => this.InitializeComponent();
+
     protected override void OnLaunched(LaunchActivatedEventArgs e)
     {
-        Frame rootFrame = Window.Current.Content as Frame;
-      
-        if (rootFrame == null)
+        if (Window.Current.Content is not Frame rootFrame)
         {
             rootFrame = new Frame();
             Window.Current.Content = rootFrame;

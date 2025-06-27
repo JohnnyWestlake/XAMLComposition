@@ -1,9 +1,4 @@
 ﻿using Microsoft.Graphics.Canvas.Effects;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Windows.UI;
 using Windows.UI.Composition;
 using Windows.UI.Xaml;
@@ -13,12 +8,19 @@ using XAMLComposition.Core;
 namespace XAMLComposition.Brushes;
 
 [DependencyProperty<double>("BlurAmount")]
+[DependencyProperty<Color>("TintColor", "Colors.Silver")]
 public partial class TintedBlurBrush : XamlCompositionBrushBase
 {
     partial void OnBlurAmountChanged(double o, double n)
     {
         if (CompositionBrush is not null)
-            CompositionBrush.Properties.Insert("BlurAmount", (float)n);
+            CompositionBrush.Properties.Insert(nameof(BlurAmount), (float)n);
+    }
+
+    partial void OnTintColorChanged(Color o, Color n)
+    {
+        if (CompositionBrush is not null)
+            CompositionBrush.Properties.Insert(nameof(TintColor), n);
     }
 
     protected override void OnConnected()
@@ -43,7 +45,7 @@ public partial class TintedBlurBrush : XamlCompositionBrushBase
             Background = new ColorSourceEffect()
             {
                 Name = "Tint",
-                Color = Colors.Silver,
+                Color = Colors.Transparent,
             },
             Foreground = new GaussianBlurEffect()
             {
@@ -55,7 +57,7 @@ public partial class TintedBlurBrush : XamlCompositionBrushBase
         };
 
         // Create EffectFactory and EffectBrush
-        CompositionEffectFactory effectFactory = compositor.CreateEffectFactory(graphicsEffect, new[] { "Blur.BlurAmount" });
+        CompositionEffectFactory effectFactory = compositor.CreateEffectFactory(graphicsEffect, ["Blur.BlurAmount", "Tint.Color"]);
         CompositionEffectBrush effectBrush = effectFactory.CreateBrush();
 
         // Create BackdropBrush
@@ -65,13 +67,20 @@ public partial class TintedBlurBrush : XamlCompositionBrushBase
         // Set EffectBrush to paint Xaml UIElement
         CompositionBrush = effectBrush;
 
-        // Ensure value is in propertyset before we call the animation below
+        // Ensure values are on the PropertySet before we call the animations below
         OnBlurAmountChanged(double.NaN, BlurAmount);
+        OnTintColorChanged(TintColor, TintColor);
 
         // Bind Blur amount in a way that external XAMLCompositionAnimations can change
         effectBrush.StartAnimation("Blur.BlurAmount",
             compositor.CreateExpressionAnimation()
                 .SetExpression("p.BlurAmount")
+                .SetParameter("p", effectBrush.Properties));
+
+        // Bind TintColor in a way that external XAMLCompositionAnimations can change
+        effectBrush.StartAnimation("Tint.Color",
+            compositor.CreateExpressionAnimation()
+                .SetExpression("p.TintColor")
                 .SetParameter("p", effectBrush.Properties));
     }
 
