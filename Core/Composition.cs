@@ -1335,6 +1335,47 @@ public static class Composition
             a.Detach(f);
     }
 
+    public static PropertyBinderCollection GetPropertyBinders(DependencyObject obj)
+    {
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj));
+
+        // Ensure there is always a collection when accessed via code
+        PropertyBinderCollection collection = (PropertyBinderCollection)obj.GetValue(AnimationsProperty);
+        if (collection == null)
+        {
+            collection = [];
+            obj.SetValue(PropertyBindersProperty, collection);
+        }
+
+        return collection;
+    }
+
+    public static void SetPropertyBinders(DependencyObject obj, PropertyBinderCollection value)
+    {
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj));
+        obj.SetValue(PropertyBindersProperty, value);
+        value?.Attach(obj);
+    }
+
+    public static readonly DependencyProperty PropertyBindersProperty =
+        DependencyProperty.RegisterAttached(
+            "PropertyBinders",
+            typeof(PropertyBinderCollection),
+            typeof(Composition),
+            new PropertyMetadata(null, (s, e) =>
+            {
+                if (e.NewValue == e.OldValue || s is not DependencyObject obj)
+                    return;
+
+                if (e.OldValue is PropertyBinderCollection old)
+                    old.Detach(obj);
+
+                if (e.NewValue is PropertyBinderCollection collection)
+                    collection.Attach(obj);
+            }));
+
     #endregion
 
     public static bool TryInsertProperty(
@@ -2069,18 +2110,13 @@ public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompo
     static PropertyInfo _lightProperty = null;
     static PropertyInfo _brushProperty = null;
 
-    protected CompositionObject GetAnimationObject(object o)
+    public static CompositionObject GetAnimationObject(object o)
     {
         if (o is ICompositionAnimationTarget i)
             return i.GetCompositionAnimationTarget();
 
         if (o is UIElement u)
-        {
-            if (this.Target == CompositionFactory.TRANSLATION)
-                u.EnableCompositionTranslation();
-
             return u.GetElementVisual();
-        }
 
         if (o is XamlLight light)
         {
@@ -2105,6 +2141,11 @@ public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompo
     {
         if (GetAnimationObject(target) is not CompositionObject obj)
             return;
+
+        // Make sure Translation is prepared
+        if (target is UIElement u
+            && this.Target == CompositionFactory.TRANSLATION)
+                u.EnableCompositionTranslation();
 
         // Cannot play if parameters are not set
         if (Parameters
@@ -2599,5 +2640,339 @@ public sealed partial class AnimationParameterCollection : DependencyObjectColle
     void Item_Updated(object sender, ParameterUpdatedEventArgs e)
     {
         this.BindingUpdated?.Invoke(this, e);
+    }
+}
+
+/// <summary>
+/// OneWay binds a value of a DependencyProperty to a UIElement's own CompositionPropertySet
+/// </summary>
+[DependencyProperty<string>("Key")]
+[DependencyProperty<DependencyProperty>("Property")]
+public partial class DPBinderBase : DependencyObject
+{
+    record class TokenRef(
+        WeakReference<DependencyObject> Reference, DependencyProperty Property, long Token)
+    {
+        public bool Unregister()
+        {
+            if (Reference.TryGetTarget(out DependencyObject target))
+            {
+                if (Property is not null)
+                    target.UnregisterPropertyChangedCallback(Property, Token);
+                Reference.SetTarget(null);
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool IsAlive()
+        {
+            return Reference.TryGetTarget(out DependencyObject target)
+                && target is not null;
+        }
+    }
+
+    private List<TokenRef> _tokens { get; } = [];
+
+    partial void OnPropertyChanged(DependencyProperty o, DependencyProperty n)
+    {
+        List<DependencyObject> alive = [];
+
+        foreach (var token in _tokens)
+        {
+            if ((token.Reference.TryGetTarget(out var reference) && reference is not null))
+            {
+                token.Unregister();
+                
+                // Keep a reference so we can reattach to it later
+                alive.Add(reference);
+            }
+        }
+
+        _tokens.Clear();
+
+        // Attach anything that's still alive to the new property
+        if (n is not null)
+            foreach (var obj in alive)
+                Attach(obj);
+
+    }
+
+    public void Attach(DependencyObject obj)
+    {
+        // Get the correct target
+        if (XamlCompositionAnimationBase.GetAnimationObject(obj) is not CompositionObject co)
+            return;
+
+        if (GetExistingRef(obj) is TokenRef match)
+            return;
+
+        // Get the PropertySet we're binding too
+        CompositionPropertySet set = co.Properties;
+
+        // Create listener
+
+        var token = Property is null 
+            ? long.MinValue
+            : obj.RegisterPropertyChangedCallback(Property, UpdateValue);
+
+        _tokens.Add(new TokenRef(new(obj), Property, token));
+
+        // Insert current value
+        UpdateValue(obj);
+    }
+
+    public void Detach(DependencyObject obj)
+    {
+        if (GetExistingRef(obj) is TokenRef match)
+        {
+            _tokens.Remove(match);
+            match.Unregister();
+        }
+    }
+
+    TokenRef GetExistingRef(DependencyObject obj)
+        => _tokens.FirstOrDefault(f =>
+            f.Reference.TryGetTarget(out DependencyObject t) && t == obj);
+
+
+    void UpdateValue(DependencyObject obj, DependencyProperty dp = null)
+    {
+        // Get the correct target
+        if (Property is null || XamlCompositionAnimationBase.GetAnimationObject(obj) is not CompositionObject co)
+            return;
+
+        // Get the PropertySet we're binding too
+        CompositionPropertySet set = co.Properties;
+
+        Insert(set, Key, obj.GetValue(Property));
+    }
+
+    void Insert(CompositionPropertySet set, string key, object value)
+    {
+        if (value is Thickness t)
+        {
+            // X = Left, Y = Top, Z = Right, W = Bottom
+            Vector4 v = new((float)t.Left, (float)t.Top, (float)t.Right, (float)t.Bottom);
+            set.InsertVector4($"{Key}", v);
+        }
+        else if (value is CornerRadius cr)
+        {
+            // X = TopLeft, Y = TopRight, Z = BottomRight, W = BottomLeft
+            Vector4 v = new((float)cr.TopLeft, (float)cr.TopRight, (float)cr.BottomRight, (float)cr.BottomLeft);
+            set.InsertVector4($"{Key}", v);
+        }
+        else
+        {
+            set.TryInsert(Key, value, out _);
+        }
+    }
+
+    void Trim()
+    {
+        // Remove any dead WeakReferences from the associated list
+        for (int i = _tokens.Count - 1; i >= 0; i--)
+            if (!_tokens[i].IsAlive())
+                _tokens.RemoveAt(i);
+    }
+}
+
+public sealed partial class PropertyBinderCollection : DependencyObjectCollection
+{
+    // After a VectorChanged event we need to compare the current state of the collection
+    // with the old collection so that we can call Detach on all removed items.
+    private List<DPBinderBase> _oldCollection { get; } = new();
+
+    private List<WeakReference<DependencyObject>> _associated { get; } = new();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="XAMLAnimationCollection"/> class.
+    /// </summary>
+    public PropertyBinderCollection()
+    {
+        this.VectorChanged += this.OnVectorChanged;
+    }
+
+    void Trim()
+    {
+        // Remove any dead WeakReferences from the associated list
+        for (int i = _associated.Count - 1; i >= 0; i--)
+            if (!_associated[i].TryGetTarget(out DependencyObject target) || target is null)
+                _associated.RemoveAt(i);
+    }
+
+    /// <summary>
+    /// Attaches the collection of animations to the specified <see cref="DependencyObject"/>.
+    /// </summary>
+    /// <param name="associatedObject">The <see cref="DependencyObject"/> to which to attach.</param>
+    /// </exception>
+    public void Attach(DependencyObject associatedObject)
+    {
+        Trim();
+
+        // Store a WeakReference to the associated object
+        _associated.Add(new WeakReference<DependencyObject>(associatedObject));
+
+        foreach (DPBinderBase item in this.OfType<DPBinderBase>())
+            item.Attach(associatedObject);
+    }
+
+    /// <summary>
+    /// Detaches the collection of animations 
+    /// </summary>
+    public void Detach(DependencyObject associatedObject)
+    {
+        // Remove the WeakReference
+        if (_associated.FirstOrDefault(f => f.TryGetTarget(out DependencyObject target) && target == associatedObject)
+            is { } weakReference)
+            _associated.Remove(weakReference);
+
+        // Stop all animations associated with the object
+        foreach (DPBinderBase item in this.OfType<DPBinderBase>())
+            item.Detach(associatedObject);
+
+        // Trim the associated list to remove any dead references
+        Trim();
+    }
+
+    private void OnVectorChanged(IObservableVector<DependencyObject> sender, IVectorChangedEventArgs eventArgs)
+    {
+        Trim();
+
+        var associated = _associated
+               .Select(x => x.TryGetTarget(out DependencyObject target) ? target : null)
+               .Where(x => x != null)
+               .ToList();
+
+        if (eventArgs.CollectionChange == CollectionChange.Reset)
+        {
+            // Stop all existing animations
+            foreach (var item in associated)
+                foreach (DPBinderBase behavior in this._oldCollection)
+                    behavior.Detach(item);
+
+            this._oldCollection.Clear();
+
+            foreach (var item in associated)
+                foreach (DPBinderBase dpb in this.OfType<DPBinderBase>())
+                    dpb.Attach(item);
+
+            foreach (DPBinderBase newItem in this.OfType<DPBinderBase>())
+                this._oldCollection.Add(newItem);
+
+            return;
+        }
+
+        int eventIndex = (int)eventArgs.Index;
+        DependencyObject changedItem = this[eventIndex];
+
+        switch (eventArgs.CollectionChange)
+        {
+            case CollectionChange.ItemInserted:
+
+                this._oldCollection.Insert(eventIndex, changedItem as DPBinderBase);
+                foreach (var a in associated)
+                    this.VerifiedAttach(changedItem, a);
+
+                break;
+
+            case CollectionChange.ItemChanged:
+                DPBinderBase oldItem = this._oldCollection[eventIndex];
+
+                foreach (var a in associated)
+                    oldItem.Detach(a);
+
+                Detach(oldItem);
+
+                this._oldCollection[eventIndex] = changedItem as DPBinderBase;
+
+                foreach (var a in associated)
+                    this.VerifiedAttach(changedItem, a);
+
+                break;
+
+            case CollectionChange.ItemRemoved:
+                oldItem = this._oldCollection[eventIndex];
+
+                foreach (var a in associated)
+                    oldItem.Detach(a);
+
+                this._oldCollection.RemoveAt(eventIndex);
+                Detach(oldItem);
+                break;
+
+            default:
+                Debug.Assert(false, "Unsupported collection operation attempted.");
+                break;
+        }
+    }
+
+
+    private DPBinderBase VerifiedAttach(DependencyObject item, DependencyObject associated)
+    {
+        DPBinderBase binder = item as DPBinderBase;
+        if (binder == null)
+        {
+            throw new InvalidOperationException("NonDPBinderBaseAddedToDPBinderBaseCollection");
+        }
+
+        if (associated != null)
+            binder.Attach(associated);
+
+        return binder;
+    }
+
+
+
+
+    /* Respond to changes from child animations */
+
+    void Child_ParameterBindingUpdated(object sender, ParameterUpdatedEventArgs e)
+    {
+        Handle(sender, e);
+    }
+
+    void Child_AnimationUpdated(object sender, AnimationUpdatedEventArgs e)
+    {
+        Handle(sender, e);
+    }
+
+    void Handle(object sender, IHandleableEvent e)
+    {
+        if (sender is XamlCompositionAnimationBase animation
+            && e.Handled is false)
+        {
+            e.Handled = true;
+
+            var associated = _associated
+             .Select(x => x.TryGetTarget(out DependencyObject target) ? target : null)
+             .Where(x => x != null)
+             //.OfType<DependencyObject>()
+             .ToList();
+
+            AnimationUpdatedEventArgs ae = e as AnimationUpdatedEventArgs;
+
+            foreach (var item in associated)
+            {
+                if (ae is not null && string.IsNullOrWhiteSpace(ae.OldTarget) is false)
+                {
+                    animation.Stop(item);
+                    continue;
+                }
+
+                // Skip if the item is not in the visual tree
+                if (item is not XamlLight
+                    && VisualTreeHelper.GetParent(item) is null)
+                    continue;
+
+                // Skip if item is not loaded, as x:Bind may not have run
+                if (item is FrameworkElement { IsLoaded: false })
+                    return;
+
+                //Debug.WriteLine($"Changed Trigger {animation.Target}");
+                animation.Start(item);
+            }
+        }
     }
 }

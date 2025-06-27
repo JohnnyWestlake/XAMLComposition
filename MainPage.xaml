@@ -9,9 +9,33 @@
     xmlns:i="using:Microsoft.Xaml.Interactivity"
     xmlns:local="using:XAMLComposition"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:wuxc="using:Windows.UI.Xaml.Controls"
     x:Name="Root"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <x:String x:Key="RotationExpression">
+            (p.Position.Y &lt; src.CenterPoint.Y) || (p.Position.X &gt; src.CenterPoint.X &amp;&amp; p.Position.Y == src.CenterPoint.Y) ? 45 * ((Clamp(Distance(src.CenterPoint, p.Position), 0, props.D2C) % props.D2C)/props.D2C) : (p.Position.Y &gt; src.CenterPoint.Y) || (p.Position.X &lt; src.CenterPoint.X &amp;&amp; p.Position.Y == src.CenterPoint.Y) ? -45 * ((Clamp(Distance(src.CenterPoint, p.Position), 0, props.D2C) % props.D2C)/props.D2C) : this.CurrentValue
+        </x:String>
+        <x:String x:Key="RotationAxisExpression">
+            (p.Position.Y &lt; src.CenterPoint.Y &amp;&amp; p.Position.X &lt; src.CenterPoint.X) ? Vector3(-(-src.CenterPoint.Y + p.Position.Y), -src.CenterPoint .X + p.Position.X, 0) : (p.Position.Y &lt; src.CenterPoint.Y &amp;&amp; p.Position.X &gt; src.CenterPoint.X) ? Vector3(-(-src.CenterPoint.Y + p.Position.Y), p.Position.X - src.CenterPoint.X, 0) : (p.Position.Y &gt; src.CenterPoint.Y &amp;&amp; p.Position.X &lt; src.CenterPoint.X) ? Vector3((p.Position.Y - src.CenterPoint.Y), src.CenterPoint.X - p.Position.X, 0) : (p.Position.Y &gt; src.CenterPoint.Y &amp;&amp; p.Position.X &gt; src.CenterPoint.X) ? Vector3((p.Position.Y - src.CenterPoint.Y), -(p.Position.X - src.CenterPoint.X), 0) : (p.Position.Y == src.CenterPoint.Y &amp;&amp; p.Position.X != src.CenterPoint.X) ? Vector3(0, src.CenterPoint.X, 0) : (p.Position.Y != src.CenterPoint.Y &amp;&amp; p.Position.X == src.CenterPoint.X) ? Vector3(src.CenterPoint.Y, 0, 0) : this.CurrentValue
+        </x:String>
+
+
+        <!--
+            We can't make this in the Style property setter as x:Bind
+            does not work inside property setters :')
+        -->
+        <c:PropertyBinderCollection x:Name="SliderBinders">
+            <c:DPBinderBase Key="Margin" Property="{x:Bind wuxc:Slider.MarginProperty}" />
+            <c:DPBinderBase Key="Value" Property="{x:Bind wuxc:Slider.ValueProperty}" />
+        </c:PropertyBinderCollection>
+
+        <Style TargetType="Slider">
+            <Setter Property="c:Composition.PropertyBinders" Value="{StaticResource SliderBinders}" />
+        </Style>
+    </Page.Resources>
 
     <Grid>
         <ScrollViewer x:Name="Scroller">
@@ -34,29 +58,17 @@
                             <c:ScrollManipulationSetParameter Key="scroll" Element="{x:Bind Scroller}" />
                         </c:XAMLExpressionAnimation>
                     </c:Composition.Animations>
-                    <Slider x:Name="Slider" Maximum="360">
-                        <i:Interaction.Behaviors>
-                            <i:EventTriggerBehavior EventName="ValueChanged">
-                                <b:SetPropertySetAction
-                                    Key="Rotation"
-                                    DefaultValue="0"
-                                    Target="{x:Bind Slider}"
-                                    Value="{Binding ElementName=Slider, Path=Value}" />
-                            </i:EventTriggerBehavior>
-                        </i:Interaction.Behaviors>
+                    <Slider
+                        x:Name="Slider"
+                        Margin="4,0"
+                        Maximum="360"
+                        Value="66">
+                        <!--<c:Composition.PropertyBinders>
+                            <c:DPBinderBase Key="Rotation" Property="{x:Bind wuxc:Slider.ValueProperty}" />
+                        </c:Composition.PropertyBinders>-->
                     </Slider>
 
-                    <Slider x:Name="Slider2" Maximum="40">
-                        <i:Interaction.Behaviors>
-                            <i:EventTriggerBehavior EventName="ValueChanged">
-                                <b:SetPropertySetAction
-                                    Key="Value"
-                                    DefaultValue="0"
-                                    Target="{x:Bind Slider2}"
-                                    Value="{Binding ElementName=Slider2, Path=Value}" />
-                            </i:EventTriggerBehavior>
-                        </i:Interaction.Behaviors>
-                    </Slider>
+                    <Slider x:Name="Slider2" Maximum="40" />
 
                     <Slider
                         x:Name="Slider3"
@@ -65,17 +77,7 @@
                         Minimum="0"
                         SmallChange="0.01"
                         StepFrequency="0.01"
-                        Value="1">
-                        <i:Interaction.Behaviors>
-                            <i:EventTriggerBehavior EventName="ValueChanged">
-                                <b:SetPropertySetAction
-                                    Key="Value"
-                                    DefaultValue="1"
-                                    Target="{x:Bind Slider3}"
-                                    Value="{Binding ElementName=Slider3, Path=Value}" />
-                            </i:EventTriggerBehavior>
-                        </i:Interaction.Behaviors>
-                    </Slider>
+                        Value="1" />
 
                     <Border
                         x:Name="Source"
@@ -88,7 +90,7 @@
                                     <c:XAMLAnimationCollection>
                                         <c:XAMLExpressionAnimation
                                             AnimationTarget="CompositionObjectProperties"
-                                            Expression="p.Rotation"
+                                            Expression="p.Value"
                                             Target="Height">
                                             <c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
                                         </c:XAMLExpressionAnimation>
@@ -153,7 +155,7 @@
                                             Target="Height" />-->
                                         <c:XAMLExpressionAnimation
                                             AnimationTarget="CompositionObjectProperties"
-                                            Expression="p.Rotation"
+                                            Expression="p.Value"
                                             Target="Height">
                                             <c:ElementVisualPropertySetParameter Key="p" Element="{x:Bind Slider}" />
                                         </c:XAMLExpressionAnimation>
@@ -200,13 +202,13 @@
 
                                             <c:CenterPointExpressionAnimation />
 
-                                            <c:XAMLExpressionAnimation Expression="{x:Bind RotationExpression()}" Target="RotationAngleInDegrees">
+                                            <c:XAMLExpressionAnimation Expression="{StaticResource RotationExpression}" Target="RotationAngleInDegrees">
                                                 <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
                                                 <c:ElementVisualPropertySetParameter Key="props" Element="{x:Bind Source}" />
                                                 <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
                                             </c:XAMLExpressionAnimation>
 
-                                            <c:XAMLExpressionAnimation Expression="{x:Bind RotationAxisExpression()}" Target="RotationAxis">
+                                            <c:XAMLExpressionAnimation Expression="{StaticResource RotationAxisExpression}" Target="RotationAxis">
                                                 <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
                                                 <c:PointerSetParameter Key="p" Element="{x:Bind Source}" />
                                             </c:XAMLExpressionAnimation>
