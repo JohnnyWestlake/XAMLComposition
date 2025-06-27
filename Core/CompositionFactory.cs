@@ -10,10 +10,10 @@ using Windows.UI.Xaml.Media;
 
 namespace XAMLComposition.Core;
 
-[Bindable]
-[AttachedProperty<double>("BounceDuration", 0.15)]
-[AttachedProperty<bool>("EnableDepthMatrix")]
-public partial class CompositionFactory : DependencyObject
+//[Bindable]
+//[AttachedProperty<double>("BounceDuration", 0.15)]
+//[AttachedProperty<bool>("EnableDepthMatrix")]
+public static partial class CompositionFactory// : DependencyObject
 {
     public const double DefaultOffsetDuration = 0.325;
 
@@ -30,90 +30,63 @@ public partial class CompositionFactory : DependencyObject
     public const string FINAL_VALUE = "this.FinalValue";
     public const int DEFAULT_STAGGER_MS = 83;
 
-    #region Attached Properties
 
-    static partial void OnBounceDurationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+
+    private static Dictionary<Compositor, Dictionary<string, object>> _objCache { get; } = new();
+
+    public static T GetCached<T>(this Compositor c, string key, Func<Compositor, T> create)
     {
-        if (d is FrameworkElement f)
-        {
-            Visual v = f.GetElementVisual();
-            if (e.NewValue is double w && w > 0)
-            {
-                CompositionFactory.EnableStandardTranslation(v, w);
-            }
-            else
-            {
-                v.Properties.SetImplicitAnimation(CompositionFactory.TRANSLATION, null);
-            }
-        }
+        //#if DEBUG
+        //        return create();
+        //#endif
+
+        if (_objCache.TryGetValue(c, out Dictionary<string, object> dic) is false)
+            _objCache[c] = dic = new();
+
+        if (dic.TryGetValue(key, out object value) is false)
+            dic[key] = value = create(c);
+
+        return (T)value;
     }
 
-    public static bool GetEnableBounceScale(DependencyObject obj)
+    /// <summary>
+    /// Gets a cached version of a CompositionObject per compositor
+    /// (Each CoreWindow has it's own compositor). Allows sharing of animations
+    /// without recreating everytime.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="c"></param>
+    /// <param name="key"></param>
+    /// <param name="create"></param>
+    /// <returns></returns>
+    public static T GetCached<T>(this CompositionObject c, string key, Func<Compositor, T> create) where T : CompositionObject
     {
-        return (bool)obj.GetValue(EnableBounceScaleProperty);
+        return GetCached<T>(c.Compositor, key, create);
     }
 
-    public static void SetEnableBounceScale(DependencyObject obj, bool value)
+    public static CubicBezierEasingFunction GetCachedEntranceEase(this Compositor c)
     {
-        obj.SetValue(EnableBounceScaleProperty, value);
+        return c.GetCached<CubicBezierEasingFunction>("EntranceEase",
+            cc => cc.CreateEntranceEasingFunction());
     }
 
-    public static readonly DependencyProperty EnableBounceScaleProperty =
-        DependencyProperty.RegisterAttached("EnableBounceScale", typeof(bool), typeof(CompositionFactory), new PropertyMetadata(false, (d, e) =>
-        {
-            if (d is FrameworkElement f)
-            {
-                Visual v = f.GetElementVisual();
-                if (e.NewValue is bool b && b)
-                {
-                    CompositionFactory.EnableStandardTranslation(v, 0.15);
-                }
-                else
-                {
-                    v.Properties.SetImplicitAnimation(CompositionFactory.TRANSLATION, null);
-                }
-            }
-        }));
-
-    public static Duration GetOpacityDuration(DependencyObject obj)
+    public static CubicBezierEasingFunction GetCachedFluentEntranceEase(this Compositor c)
     {
-        return (Duration)obj.GetValue(OpacityDurationProperty);
+        return c.GetCached<CubicBezierEasingFunction>("FluentEntranceEase",
+            cc => cc.CreateFluentEntranceEasingFunction());
     }
 
-    public static void SetOpacityDuration(DependencyObject obj, Duration value)
+    /// <summary>
+    /// Returns a cached instance of the LinearEase function
+    /// </summary>
+    /// <param name="c"></param>
+    /// <returns></returns>
+    public static CompositionEasingFunction GetLinearEase(this Compositor c1)
     {
-        obj.SetValue(OpacityDurationProperty, value);
+        return c1.GetCached("LINEAREASE", c => c.CreateLinearEasingFunction());
     }
 
-    public static readonly DependencyProperty OpacityDurationProperty =
-        DependencyProperty.RegisterAttached("OpacityDuration", typeof(Duration), typeof(CompositionFactory), new PropertyMetadata(new Duration(TimeSpan.FromSeconds(0)), (d, e) =>
-        {
-            if (d is FrameworkElement element && e.NewValue is Duration t)
-            {
-                SetOpacityTransition(element, t.HasTimeSpan ? t.TimeSpan : TimeSpan.Zero);
-            }
-        }));
 
-    public static double GetCornerRadius(DependencyObject obj)
-    {
-        return (double)obj.GetValue(CornerRadiusProperty);
-    }
-
-    public static void SetCornerRadius(DependencyObject obj, double value)
-    {
-        obj.SetValue(CornerRadiusProperty, value);
-    }
-
-    public static readonly DependencyProperty CornerRadiusProperty =
-        DependencyProperty.RegisterAttached("CornerRadius", typeof(double), typeof(CompositionFactory), new PropertyMetadata(0d, (d, e) =>
-        {
-            if (d is FrameworkElement element && e.NewValue is double v)
-            {
-                SetCornerRadius(element, (float)v);
-            }
-        }));
-
-    #endregion
 
 
     //------------------------------------------------------
@@ -123,17 +96,6 @@ public partial class CompositionFactory : DependencyObject
     //------------------------------------------------------
 
     #region Perspective Expression
-
-    static partial void OnEnableDepthMatrixChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is UIElement u && e.NewValue is bool b)
-        {
-            if (b)
-                EnableAutoPerspectiveMatrix(u);
-            else
-                u.GetElementVisual().StopAnimation(nameof(Visual.TransformMatrix));
-        }
-    }
 
     // Creates a basic 4x4 Matrix for use in perspective matrix multiplication. 
     // Depth of the matrix is automatically bound to the width of the visual.
@@ -218,6 +180,65 @@ public partial class CompositionFactory : DependencyObject
 
 
 
+    //------------------------------------------------------
+    //
+    // Expression Animation : SIZE LINKING
+    //
+    //------------------------------------------------------
+
+    #region Linked Size Expression
+
+    /*
+     * An expression that matches the size of a visual to another.
+     * Useful for keeping shadows etc. in size sync with their target.
+     */
+
+    static string LINKED_SIZE_EXPRESSION { get; } = $"{nameof(Visual)}.{nameof(Visual.Size)}";
+
+    public static ExpressionAnimation CreateLinkedSizeExpression(FrameworkElement sourceElement)
+    {
+        return CreateLinkedSizeExpression(sourceElement.GetElementVisual());
+    }
+
+
+    public static ExpressionAnimation CreateLinkedSizeExpression(Visual sourceVisual)
+    {
+        return sourceVisual.CreateExpressionAnimation(nameof(Visual.Size))
+                           .SetParameter(nameof(Visual), sourceVisual)
+                           .SetExpression(LINKED_SIZE_EXPRESSION);
+    }
+
+    /// <summary>
+    /// Starts an Expression Animation that links the size of <paramref name="sourceVisual"/> to the <paramref name="targetVisual"/>
+    /// </summary>
+    /// <param name="targetVisual">Element whose size you want to automatically change</param>
+    /// <param name="sourceVisual"></param>
+    /// <returns></returns>
+    public static T LinkSize<T>(this T targetVisual, Visual sourceVisual) where T : Visual
+    {
+        targetVisual.StartAnimation(CreateLinkedSizeExpression(sourceVisual));
+        return targetVisual;
+    }
+
+    public static T LinkShapeSize<T>(this T targetVisual, Visual sourceVisual) where T : CompositionGeometry
+    {
+        targetVisual.StartAnimation(CreateLinkedSizeExpression(sourceVisual));
+        return targetVisual;
+    }
+
+    /// <summary>
+    /// Starts an Expression Animation that links the size of <paramref name="element"/> to the <paramref name="targetVisual"/>
+    /// </summary>
+    /// <param name="targetVisual">Element whose size you want to automatically change</param>
+    /// <param name="element">Element whose size will change <paramref name="targetVisual"/>s size</param>
+    /// <returns></returns>
+    public static T LinkSize<T>(this T targetVisual, FrameworkElement element) where T : Visual
+    {
+        targetVisual.StartAnimation(CreateLinkedSizeExpression(element.GetElementVisual()));
+        return targetVisual;
+    }
+
+    #endregion
 
 
 
@@ -296,7 +317,7 @@ public partial class CompositionFactory : DependencyObject
         if (!UISettings.AnimationsEnabled)
             return;
 
-        Visual v = e.EnableTranslation(true).GetElementVisual();
+        Visual v = e.EnableCompositionTranslation().GetElementVisual();
 
 
         //if (ResourceHelper.IsMaterialTheme)
@@ -336,7 +357,7 @@ public partial class CompositionFactory : DependencyObject
         if (!UISettings.AnimationsEnabled)
             return;
 
-        Visual v = e.EnableTranslation(true).GetElementVisual();
+        Visual v = e.EnableCompositionTranslation().GetElementVisual();
 
         //if (ResourceHelper.IsMaterialTheme)
         //{
@@ -400,7 +421,7 @@ public partial class CompositionFactory : DependencyObject
     public static ICompositionAnimationBase CreateEntranceAnimation(UIElement target, Vector3 from, int delayMs, int durationMs = 700)
     {
         string key = $"CEA{from.X}{from.Y}{delayMs}{durationMs}";
-        Compositor c1 = target.EnableTranslation(true).GetElementVisual().Compositor;
+        Compositor c1 = target.EnableCompositionTranslation().GetElementVisual().Compositor;
 
         return c1.GetCached(key, c =>
         {
@@ -565,7 +586,7 @@ public partial class CompositionFactory : DependencyObject
 
         double delay = 0.15;
 
-        var bv = background.EnableTranslation(true).GetElementVisual();
+        var bv = background.EnableCompositionTranslation().GetElementVisual();
         var ease = bv.Compositor.GetCachedFluentEntranceEase();
 
         var bt = bv.CreateVector3KeyFrameAnimation(TRANSLATION)
@@ -581,7 +602,7 @@ public partial class CompositionFactory : DependencyObject
 
         foreach (var child in children)
         {
-            var v = child.EnableTranslation(true).GetElementVisual();
+            var v = child.EnableCompositionTranslation().GetElementVisual();
             var t = v.CreateVector3KeyFrameAnimation(TRANSLATION)
                 .AddKeyFrame(0, "Vector3(0, -this.Target.Size.Y, 0)")
                 .AddKeyFrame(1, Vector3.Zero, ease)
@@ -634,7 +655,7 @@ public partial class CompositionFactory : DependencyObject
         FrameworkElement bar,
         FrameworkElement content)
     {
-        var bv = bar.EnableTranslation(true).GetElementVisual();
+        var bv = bar.EnableCompositionTranslation().GetElementVisual();
         bv.StartAnimation(
             bv.CreateScalarKeyFrameAnimation(nameof(Visual.Opacity))
                 .AddKeyFrame(0, 0)
@@ -680,7 +701,7 @@ public partial class CompositionFactory : DependencyObject
         double delay = 0.1;
         foreach (var element in barElements)
         {
-            var v = element.EnableTranslation(true).GetElementVisual();
+            var v = element.EnableCompositionTranslation().GetElementVisual();
             v.StartAnimationGroup(
                 v.CreateVector3KeyFrameAnimation(TRANSLATION)
                  .AddKeyFrame(0, 0, -100)
@@ -701,7 +722,7 @@ public partial class CompositionFactory : DependencyObject
         if (!UISettings.AnimationsEnabled)
             return;
 
-        Visual v = target.EnableTranslation(true).GetElementVisual();
+        Visual v = target.EnableCompositionTranslation().GetElementVisual();
         var t = v.GetCached("_FHSU", c =>
             c.CreateVector3KeyFrameAnimation()
                 .SetTarget(TRANSLATION)
@@ -714,7 +735,7 @@ public partial class CompositionFactory : DependencyObject
 
     public static Vector3KeyFrameAnimation CreateSlideOut(UIElement e, float x, float y)
     {
-        Visual v = e.EnableTranslation(true).GetElementVisual();
+        Visual v = e.EnableCompositionTranslation().GetElementVisual();
         return v.GetCached("_SLDO",
                 c => c.CreateVector3KeyFrameAnimation()
                         .SetTarget(TRANSLATION)
@@ -725,7 +746,7 @@ public partial class CompositionFactory : DependencyObject
 
     public static Vector3KeyFrameAnimation CreateSlideOutX(UIElement e)
     {
-        Visual v = e.EnableTranslation(true).GetElementVisual();
+        Visual v = e.EnableCompositionTranslation().GetElementVisual();
         return v.GetCached("SOX",
                 c => v.CreateVector3KeyFrameAnimation()
                         .SetTarget(TRANSLATION)
@@ -736,7 +757,7 @@ public partial class CompositionFactory : DependencyObject
 
     public static Vector3KeyFrameAnimation CreateSlideOutY(UIElement e)
     {
-        Visual v = e.EnableTranslation(true).GetElementVisual();
+        Visual v = e.EnableCompositionTranslation().GetElementVisual();
         return v.GetCached("SOY",
                 c => c.CreateVector3KeyFrameAnimation()
                         .SetTarget(TRANSLATION)
@@ -747,7 +768,7 @@ public partial class CompositionFactory : DependencyObject
 
     public static Vector3KeyFrameAnimation CreateSlideIn(UIElement e)
     {
-        Visual v = e.EnableTranslation(true).GetElementVisual();
+        Visual v = e.EnableCompositionTranslation().GetElementVisual();
         return v.GetCached("_SLDI",
                 c => c.CreateVector3KeyFrameAnimation()
                         .SetTarget(TRANSLATION)
@@ -956,4 +977,92 @@ public partial class CompositionFactory : DependencyObject
     //        target.Shadow = nt;
     //    }
     //}
+
+
+
+    //#region Attached Properties
+
+    //static partial void OnBounceDurationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    //{
+    //    if (d is FrameworkElement f)
+    //    {
+    //        Visual v = f.GetElementVisual();
+    //        if (e.NewValue is double w && w > 0)
+    //        {
+    //            CompositionFactory.EnableStandardTranslation(v, w);
+    //        }
+    //        else
+    //        {
+    //            v.Properties.SetImplicitAnimation(CompositionFactory.TRANSLATION, null);
+    //        }
+    //    }
+    //}
+
+    //public static bool GetEnableBounceScale(DependencyObject obj)
+    //{
+    //    return (bool)obj.GetValue(EnableBounceScaleProperty);
+    //}
+
+    //public static void SetEnableBounceScale(DependencyObject obj, bool value)
+    //{
+    //    obj.SetValue(EnableBounceScaleProperty, value);
+    //}
+
+    //public static readonly DependencyProperty EnableBounceScaleProperty =
+    //    DependencyProperty.RegisterAttached("EnableBounceScale", typeof(bool), typeof(CompositionFactory), new PropertyMetadata(false, (d, e) =>
+    //    {
+    //        if (d is FrameworkElement f)
+    //        {
+    //            Visual v = f.GetElementVisual();
+    //            if (e.NewValue is bool b && b)
+    //            {
+    //                CompositionFactory.EnableStandardTranslation(v, 0.15);
+    //            }
+    //            else
+    //            {
+    //                v.Properties.SetImplicitAnimation(CompositionFactory.TRANSLATION, null);
+    //            }
+    //        }
+    //    }));
+
+    //public static Duration GetOpacityDuration(DependencyObject obj)
+    //{
+    //    return (Duration)obj.GetValue(OpacityDurationProperty);
+    //}
+
+    //public static void SetOpacityDuration(DependencyObject obj, Duration value)
+    //{
+    //    obj.SetValue(OpacityDurationProperty, value);
+    //}
+
+    //public static readonly DependencyProperty OpacityDurationProperty =
+    //    DependencyProperty.RegisterAttached("OpacityDuration", typeof(Duration), typeof(CompositionFactory), new PropertyMetadata(new Duration(TimeSpan.FromSeconds(0)), (d, e) =>
+    //    {
+    //        if (d is FrameworkElement element && e.NewValue is Duration t)
+    //        {
+    //            SetOpacityTransition(element, t.HasTimeSpan ? t.TimeSpan : TimeSpan.Zero);
+    //        }
+    //    }));
+
+    //public static double GetCornerRadius(DependencyObject obj)
+    //{
+    //    return (double)obj.GetValue(CornerRadiusProperty);
+    //}
+
+    //public static void SetCornerRadius(DependencyObject obj, double value)
+    //{
+    //    obj.SetValue(CornerRadiusProperty, value);
+    //}
+
+    //public static readonly DependencyProperty CornerRadiusProperty =
+    //    DependencyProperty.RegisterAttached("CornerRadius", typeof(double), typeof(CompositionFactory), new PropertyMetadata(0d, (d, e) =>
+    //    {
+    //        if (d is FrameworkElement element && e.NewValue is double v)
+    //        {
+    //            SetCornerRadius(element, (float)v);
+    //        }
+    //    }));
+
+    //#endregion
+
 }

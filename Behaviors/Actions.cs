@@ -87,7 +87,7 @@ public partial class SetAnimationCollectionAction : DependencyObject, IAction
     public object Execute(object sender, object parameter)
     {
         if (Target is not null)
-            Composition.SetAnimations(Target, Animations);
+            CompositionProperty.SetAnimations(Target, Animations);
 
         return true;
     }

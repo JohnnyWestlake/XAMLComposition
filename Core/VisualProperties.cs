@@ -14,10 +14,11 @@ namespace XAMLComposition.Core;
 [AttachedProperty<object>("Translation", "Vector3.Zero")]
 [AttachedProperty<object>(nameof(Visual.RelativeOffsetAdjustment), "Vector3.Zero")]
 [AttachedProperty<object>(nameof(Visual.RelativeSizeAdjustment), "Vector2.One")]
+[AttachedProperty<object>(nameof(Visual.Scale), "Vector2.One")]
 [AttachedProperty<object>(nameof(Visual.RotationAxis), "Vector3.UnitZ")]
 [AttachedProperty<CompositionBackfaceVisibility>(nameof(Visual.BackfaceVisibility))]
 [AttachedProperty<bool>(nameof(Visual.IsVisible), true)]
-[AttachedProperty<bool>(nameof(Visual.IsPixelSnappingEnabled))]
+//[AttachedProperty<bool>(nameof(Visual.IsPixelSnappingEnabled))]
 [AttachedProperty<double>(nameof(Visual.Opacity), 1d)]
 public static partial class VisualProperties
 {
@@ -71,6 +72,20 @@ public static partial class VisualProperties
         }
     }
 
+    static partial void OnScaleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is UIElement u)
+        {
+            Visual v = u.GetElementVisual();
+
+            if (e.NewValue is Vector3 v2
+                || (e.NewValue is string str && XAMLCore.TryParse(str, out v2)))
+                v.Scale = v2;
+            else if (e.NewValue is Point p)
+                v.Scale = new(p.ToVector2(), 0);
+        }
+    }
+
     static partial void OnRotationAxisChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is UIElement u)
@@ -91,11 +106,11 @@ public static partial class VisualProperties
                 u2.GetElementVisual().BackfaceVisibility = (CompositionBackfaceVisibility)i;
     }
 
-    static partial void OnIsPixelSnappingEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is UIElement u && e.NewValue is bool value)
-            u.GetElementVisual().IsPixelSnappingEnabled = value;
-    }
+    //static partial void OnIsPixelSnappingEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    //{
+    //    if (d is UIElement u && e.NewValue is bool value)
+    //        u.GetElementVisual().IsPixelSnappingEnabled = value;
+    //}
 
     static partial void OnIsVisibleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {

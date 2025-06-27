@@ -82,51 +82,11 @@ public static class Composition
         batch.End();
     }
 
-    private static Dictionary<Compositor, Dictionary<string, object>> _objCache { get; } = new();
 
-    public static T GetCached<T>(this Compositor c, string key, Func<Compositor, T> create)
-    {
-//#if DEBUG
-//        return create();
-//#endif
 
-        if (_objCache.TryGetValue(c, out Dictionary<string, object> dic) is false)
-            _objCache[c] = dic = new();
-
-        if (dic.TryGetValue(key, out object value) is false)
-            dic[key] = value = create(c);
-
-        return (T)value;
-    }
-
-    /// <summary>
-    /// Gets a cached version of a CompositionObject per compositor
-    /// (Each CoreWindow has it's own compositor). Allows sharing of animations
-    /// without recreating everytime.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="c"></param>
-    /// <param name="key"></param>
-    /// <param name="create"></param>
-    /// <returns></returns>
-    public static T GetCached<T>(this CompositionObject c, string key, Func<Compositor, T> create) where T : CompositionObject
-    {
-        return GetCached<T>(c.Compositor, key, create);
-    }
-
-    public static CubicBezierEasingFunction GetCachedEntranceEase(this Compositor c)
-    {
-        return c.GetCached<CubicBezierEasingFunction>("EntranceEase",
-            cc => cc.CreateEntranceEasingFunction());
-    }
-
-    public static CubicBezierEasingFunction GetCachedFluentEntranceEase(this Compositor c)
-    {
-        return c.GetCached<CubicBezierEasingFunction>("FluentEntranceEase",
-            cc => cc.CreateFluentEntranceEasingFunction());
-    }
-
+   
     #endregion
+
 
 
     #region Element / Base Extensions
@@ -155,7 +115,7 @@ public static class Composition
         // Create a new container visual, link it's size to the element's and then set
         // the container as the child visual of the element.
         container = GetElementVisual(element).Compositor.CreateContainerVisual();
-        CompositionExtensions.LinkSize(container, GetElementVisual(element));
+        CompositionFactory.LinkSize(container, GetElementVisual(element));
         element.SetChildVisual(container);
 
         return container;
@@ -229,6 +189,7 @@ public static class Composition
     }
 
     #endregion
+
 
 
     #region Translation
@@ -337,6 +298,7 @@ public static class Composition
     }
 
     #endregion
+
 
 
     #region ICompositionAnimationBase
@@ -476,6 +438,7 @@ public static class Composition
     #endregion
 
 
+
     #region SetTarget
 
     public static T SetTarget<T>(this T animation, string target) where T : CompositionAnimation
@@ -502,6 +465,8 @@ public static class Composition
 
     #endregion
 
+
+
     #region SetDelayTime
 
     /// <summary>
@@ -526,6 +491,7 @@ public static class Composition
     }
 
     #endregion
+
 
 
     #region SetDelay
@@ -556,6 +522,7 @@ public static class Composition
     #endregion
 
 
+
     #region SetDelayBehaviour
 
     public static T SetDelayBehavior<T>(this T animation, AnimationDelayBehavior behavior)
@@ -573,6 +540,7 @@ public static class Composition
     }
 
     #endregion
+
 
 
     #region SetDuration
@@ -600,6 +568,7 @@ public static class Composition
     #endregion
 
 
+
     #region StopBehaviour
 
     public static T SetStopBehavior<T>(this T animation, AnimationStopBehavior stopBehavior) where T : KeyFrameAnimation
@@ -609,6 +578,7 @@ public static class Composition
     }
 
     #endregion
+
 
 
     #region Direction
@@ -622,6 +592,7 @@ public static class Composition
     #endregion
 
 
+
     #region Comment
 
     public static T SetComment<T>(this T obj, string comment) where T : CompositionObject
@@ -633,6 +604,7 @@ public static class Composition
     #endregion
 
 
+
     #region IterationBehavior
 
     public static T SetIterationBehavior<T>(this T animation, AnimationIterationBehavior iterationBehavior) where T : KeyFrameAnimation
@@ -642,6 +614,7 @@ public static class Composition
     }
 
     #endregion
+
 
 
     #region AddKeyFrame Builders
@@ -834,6 +807,7 @@ public static class Composition
     #endregion
 
 
+
     #region Compositor Create Builders
 
     private static T TryAddGroup<T>(CompositionObject obj, T animation) where T : CompositionAnimation
@@ -908,6 +882,7 @@ public static class Composition
     #endregion
 
 
+
     #region SetExpression
 
     public static ExpressionAnimation SetExpression(this ExpressionAnimation animation, string expression)
@@ -919,6 +894,7 @@ public static class Composition
     }
 
     #endregion  
+
 
 
     #region SetParameter Builders
@@ -1004,6 +980,7 @@ public static class Composition
     }
 
     #endregion
+
 
 
     #region PropertySet Builders
@@ -1117,6 +1094,7 @@ public static class Composition
     #endregion
 
 
+
     #region Animation Start / Stop
 
     public static void StartAnimation(this CompositionObject obj, ICompositionAnimationBase animation)
@@ -1194,6 +1172,8 @@ public static class Composition
 
     #endregion
 
+
+
     #region Extras
 
     public static CubicBezierEasingFunction CreateEase(this Compositor c, float x1, float y1, float x2, float y2)
@@ -1254,129 +1234,7 @@ public static class Composition
 
     #endregion
 
-    #region Animations AttachedProperty
-
-    public static XAMLAnimationCollection GetAnimations(DependencyObject obj)
-    {
-        if (obj == null)
-            throw new ArgumentNullException(nameof(obj));
-
-        // Ensure there is always a collection when accessed via code
-        XAMLAnimationCollection collection = (XAMLAnimationCollection)obj.GetValue(AnimationsProperty);
-        if (collection == null)
-        {
-            collection = new ();
-            obj.SetValue(AnimationsProperty, collection);
-        }
-
-        return collection;
-    }
-
-    public static void SetAnimations(DependencyObject obj, XAMLAnimationCollection value)
-    {
-        if (obj == null)
-            throw new ArgumentNullException(nameof(obj));
-        obj.SetValue(AnimationsProperty, value);
-
-        if (value is not null)
-        {
-            value.Attach(obj);
-        }
-    }
-
-    public static readonly DependencyProperty AnimationsProperty =
-        DependencyProperty.RegisterAttached(
-            "Animations",
-            typeof(XAMLAnimationCollection),
-            typeof(Composition),
-            new PropertyMetadata(null, (s, e) =>
-            {
-                if (e.NewValue == e.OldValue || s is not DependencyObject obj)
-                    return;
-
-                if (e.OldValue is XAMLAnimationCollection old)
-                {
-                    if (s is FrameworkElement f)
-                    {
-                        f.Loaded -= Obj_Loaded;
-                        f.Unloaded -= Obj_Unloaded;
-                    }
-                   
-                    old.Detach(obj);
-                }
-
-                if (e.NewValue is XAMLAnimationCollection collection)
-                {
-                    if (s is FrameworkElement f)
-                    {
-                        f.Loaded -= Obj_Loaded;
-                        f.Unloaded -= Obj_Unloaded;
-
-                        f.Loaded += Obj_Loaded;
-                        f.Unloaded += Obj_Unloaded;
-                    }
-
-                    collection.Attach(obj);
-                }
-            }));
-
-    private static void Obj_Loaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement f)
-        {
-            if (GetAnimations(f) is { } a)
-                a.Attach(f);
-        }
-    }
-
-    private static void Obj_Unloaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement f && GetAnimations(f) is { } a)
-            a.Detach(f);
-    }
-
-    public static PropertyBinderCollection GetPropertyBinders(DependencyObject obj)
-    {
-        if (obj == null)
-            throw new ArgumentNullException(nameof(obj));
-
-        // Ensure there is always a collection when accessed via code
-        PropertyBinderCollection collection = (PropertyBinderCollection)obj.GetValue(AnimationsProperty);
-        if (collection == null)
-        {
-            collection = [];
-            obj.SetValue(PropertyBindersProperty, collection);
-        }
-
-        return collection;
-    }
-
-    public static void SetPropertyBinders(DependencyObject obj, PropertyBinderCollection value)
-    {
-        if (obj == null)
-            throw new ArgumentNullException(nameof(obj));
-        obj.SetValue(PropertyBindersProperty, value);
-        value?.Attach(obj);
-    }
-
-    public static readonly DependencyProperty PropertyBindersProperty =
-        DependencyProperty.RegisterAttached(
-            "PropertyBinders",
-            typeof(PropertyBinderCollection),
-            typeof(Composition),
-            new PropertyMetadata(null, (s, e) =>
-            {
-                if (e.NewValue == e.OldValue || s is not DependencyObject obj)
-                    return;
-
-                if (e.OldValue is PropertyBinderCollection old)
-                    old.Detach(obj);
-
-                if (e.NewValue is PropertyBinderCollection collection)
-                    collection.Attach(obj);
-            }));
-
-    #endregion
+   
 
     public static bool TryInsertProperty(
         CompositionPropertySet set,
@@ -1710,10 +1568,10 @@ public interface IHandleableEvent
     bool Handled { get; set; }
 }
 
-public class ParameterUpdatedEventArgs(AnimationParameterBase parameter) 
+public class ParameterUpdatedEventArgs(CompositionParameterBase parameter) 
     : EventArgs, IHandleableEvent
 {
-    public AnimationParameterBase Parameter { get; } = parameter;
+    public CompositionParameterBase Parameter { get; } = parameter;
 
     public bool Handled { get; set; }
 }
@@ -1744,9 +1602,9 @@ public interface IAnimationParameter
 
 [DependencyProperty<string>("Key")]
 [DependencyProperty<ParameterBindingMode>("BindingMode", ParameterBindingMode.AtStart)]
-public abstract partial class AnimationParameterBase : DependencyObject, IEquatable<AnimationParameterBase>
+public abstract partial class CompositionParameterBase : DependencyObject, IEquatable<CompositionParameterBase>
 {
-    protected WeakReference<ICompositionAnimationBase> _animation;
+    protected WeakReference<CompositionObject> _target;
 
     /// <summary>
     /// Fires only when BindingMode is set to Live.
@@ -1755,30 +1613,36 @@ public abstract partial class AnimationParameterBase : DependencyObject, IEquata
 
     public bool IsValid { get; private set; }
 
-    public void AttachTo(ICompositionAnimationBase ani)
+    public void AttachTo(CompositionObject ani)
     {
-        _animation = new(ani);
+        _target = new(ani);
         Update();
     }
 
     public void Detach()
     {
         // Called when removed from - clear out the value we set
-        if (_animation?.TryGetTarget(out ICompositionAnimationBase animation) is true)
+        if (_target?.TryGetTarget(out CompositionObject obj) is true)
         {
-            if (!string.IsNullOrWhiteSpace(Key))
-                animation.ClearParameter(Key);
+            if (obj is ICompositionAnimationBase animation)
+            {
+                if (!string.IsNullOrWhiteSpace(Key))
+                    animation.ClearParameter(Key);
+            }
         }
 
-        _animation = null;
+        _target = null;
     }
 
     partial void OnKeyChanged(string o, string n)
     {
-        if (_animation?.TryGetTarget(out ICompositionAnimationBase animation) is true)
+        if (_target?.TryGetTarget(out CompositionObject obj) is true)
         {
-            if (!string.IsNullOrWhiteSpace(o))
-                animation.ClearParameter(o);
+            if (obj is ICompositionAnimationBase animation)
+            {
+                if (!string.IsNullOrWhiteSpace(o))
+                    animation.ClearParameter(o);
+            }
 
             if (!string.IsNullOrWhiteSpace(n))
                 Update();
@@ -1795,9 +1659,12 @@ public abstract partial class AnimationParameterBase : DependencyObject, IEquata
             return;
         }
 
-        if (_animation?.TryGetTarget(out ICompositionAnimationBase animation) is true)
+        if (_target?.TryGetTarget(out CompositionObject obj) is true)
         {
-            UpdateInternal(animation);
+            if (obj is ICompositionAnimationBase animation)
+                UpdateAnimation(animation);
+            else if (obj is CompositionPropertySet set)
+                UpdateSet(set);
 
             // If the binding mode is live, we need to update the parameter when it changes
             if (BindingMode == ParameterBindingMode.Live || IsValid == false)
@@ -1810,7 +1677,7 @@ public abstract partial class AnimationParameterBase : DependencyObject, IEquata
 
     protected virtual bool CheckIsValid()
     {
-        if (_animation is null
+        if (_target is null
             || ReadLocalValue(KeyProperty) == DependencyProperty.UnsetValue
             || ReadLocalValue(GetValueProperty()) == DependencyProperty.UnsetValue
             || GetValue(GetValueProperty()) == null)
@@ -1819,17 +1686,19 @@ public abstract partial class AnimationParameterBase : DependencyObject, IEquata
         return true;
     }
 
-    protected abstract void UpdateInternal(ICompositionAnimationBase animation);
+    protected abstract void UpdateAnimation(ICompositionAnimationBase animation);
+
+    protected abstract void UpdateSet(CompositionPropertySet set);
 
 
     #region Comparison
 
     public override bool Equals(object obj)
     {
-        return Equals(obj as AnimationParameterBase);
+        return Equals(obj as CompositionParameterBase);
     }
 
-    public virtual bool Equals(AnimationParameterBase other)
+    public virtual bool Equals(CompositionParameterBase other)
     {
         return other is not null &&
                Key == other.Key &&
@@ -1844,12 +1713,12 @@ public abstract partial class AnimationParameterBase : DependencyObject, IEquata
         return hashCode;
     }
 
-    public static bool operator ==(AnimationParameterBase left, AnimationParameterBase right)
+    public static bool operator ==(CompositionParameterBase left, CompositionParameterBase right)
     {
-        return EqualityComparer<AnimationParameterBase>.Default.Equals(left, right);
+        return EqualityComparer<CompositionParameterBase>.Default.Equals(left, right);
     }
 
-    public static bool operator !=(AnimationParameterBase left, AnimationParameterBase right)
+    public static bool operator !=(CompositionParameterBase left, CompositionParameterBase right)
     {
         return !(left == right);
     }
@@ -1859,61 +1728,65 @@ public abstract partial class AnimationParameterBase : DependencyObject, IEquata
 }
 
 [DependencyProperty<double>("Value", 0d, "Update")]
-public partial class DoubleParameter : AnimationParameterBase
+public partial class DoubleParameter : CompositionParameterBase
 {
     public override DependencyProperty GetValueProperty() => ValueProperty;
 
     protected override bool CheckIsValid() => base.CheckIsValid() && double.IsNaN(Value) is false;
 
-    protected override void UpdateInternal(ICompositionAnimationBase animation)
-    {
-        animation.SetScalarParameter(Key, (float)Value);
-    }
+    protected override void UpdateAnimation(ICompositionAnimationBase animation) 
+        => animation.SetScalarParameter(Key, (float)Value);
+
+    protected override void UpdateSet(CompositionPropertySet set)
+        => set.Insert(Key, (float)Value);
 }
 
 [DependencyProperty<UIElement>("Element", default, "Update")]
-public partial class ElementVisualParameter : AnimationParameterBase
+public partial class ElementVisualParameter : CompositionParameterBase
 {
     public override DependencyProperty GetValueProperty() => ElementProperty;
 
-    protected override void UpdateInternal(ICompositionAnimationBase animation)
-    {
-        animation.SetReferenceParameter(Key, Element.GetElementVisual());
-    }
+    protected override void UpdateAnimation(ICompositionAnimationBase animation) 
+        => animation.SetReferenceParameter(Key, Element.GetElementVisual());
+
+    protected override void UpdateSet(CompositionPropertySet set)
+        => throw new InvalidOperationException();
 }
 
 [DependencyProperty<UIElement>("Element", default, "Update")]
-public partial class ElementVisualPropertySetParameter : AnimationParameterBase
+public partial class ElementVisualPropertySetParameter : CompositionParameterBase
 {
     // TODO : Support DefaultValues collection
 
     public override DependencyProperty GetValueProperty() => ElementProperty;
 
-    protected override void UpdateInternal(ICompositionAnimationBase animation)
-    {
-        animation.SetReferenceParameter(Key, Element.GetElementVisual().Properties);
-    }
+    protected override void UpdateAnimation(ICompositionAnimationBase animation) 
+        => animation.SetReferenceParameter(Key, Element.GetElementVisual().Properties);
+
+    protected override void UpdateSet(CompositionPropertySet set)
+       => throw new InvalidOperationException();
 }
 
 [DependencyProperty<UIElement>("Element", default, "Update")]
-public partial class PointerSetParameter : AnimationParameterBase
+public partial class PointerSetParameter : CompositionParameterBase
 {
     public override DependencyProperty GetValueProperty() => ElementProperty;
 
-    protected override void UpdateInternal(ICompositionAnimationBase animation)
-    {
-        animation.SetReferenceParameter(Key, ElementCompositionPreview.GetPointerPositionPropertySet(Element));
-    }
+    protected override void UpdateAnimation(ICompositionAnimationBase animation) 
+        => animation.SetReferenceParameter(Key, ElementCompositionPreview.GetPointerPositionPropertySet(Element));
+
+    protected override void UpdateSet(CompositionPropertySet set)
+       => throw new InvalidOperationException();
 }
 
 [DependencyProperty<UIElement>("Element", default, "Update")]
-public partial class ScrollManipulationSetParameter : AnimationParameterBase
+public partial class ScrollManipulationSetParameter : CompositionParameterBase
 {
     public override DependencyProperty GetValueProperty() => ElementProperty;
 
     protected override bool CheckIsValid() => base.CheckIsValid() && Element is ScrollViewer;
 
-    protected override void UpdateInternal(ICompositionAnimationBase animation)
+    protected override void UpdateAnimation(ICompositionAnimationBase animation)
     {
         // TODO: At some point we can support automatically going through the element's visual tree
         // to find the first ScrollViewer, allowing us to easily support ListView/GridView, etc.
@@ -1921,15 +1794,18 @@ public partial class ScrollManipulationSetParameter : AnimationParameterBase
         animation.SetReferenceParameter(Key, 
             ElementCompositionPreview.GetScrollViewerManipulationPropertySet((ScrollViewer)Element));
     }
+
+    protected override void UpdateSet(CompositionPropertySet set)
+       => throw new InvalidOperationException();
 }
 
 [DependencyProperty<object>("Value", default, "Update")]
 [DependencyProperty<UIElementReferenceType>("UIElementReferenceType", UIElementReferenceType.ElementVisual, nameof(Update))]
-public partial class AnimationParameter : AnimationParameterBase
+public partial class AnimationParameter : CompositionParameterBase
 {
     public override DependencyProperty GetValueProperty() => ValueProperty;
 
-    protected override void UpdateInternal(ICompositionAnimationBase animation)
+    protected override void UpdateAnimation(ICompositionAnimationBase animation)
     {
         if (Value is float f)
             animation.SetScalarParameter(Key, f);
@@ -1979,12 +1855,17 @@ public partial class AnimationParameter : AnimationParameterBase
         }
     }
 
+    protected override void UpdateSet(CompositionPropertySet set)
+    {
+        Composition.TryInsertProperty(set, Key, Value, CompositionParameterType.Unknown);
+    }
+
     public override int GetHashCode()
     {
         return base.GetHashCode() * -1521134295 + UIElementReferenceType.GetHashCode();
     }
 
-    public override bool Equals(AnimationParameterBase other)
+    public override bool Equals(CompositionParameterBase other)
     {
         return base.Equals(other)
              && other is AnimationParameter o
@@ -2008,24 +1889,24 @@ public interface ICompositionAnimationTarget
 [DependencyProperty<AnimationTarget>("AnimationTarget")]
 public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompositionAnimationBase
 {
-    public AnimationParameterCollection Parameters
+    public CompositionParameterCollection Parameters
     {
         get {
             if (GetValue(ParametersProperty) is null)
-                SetValue(ParametersProperty, new AnimationParameterCollection());
-            return (AnimationParameterCollection)GetValue(ParametersProperty); }
+                SetValue(ParametersProperty, new CompositionParameterCollection());
+            return (CompositionParameterCollection)GetValue(ParametersProperty); }
         private set { SetValue(ParametersProperty, value); }
     }
 
     public static readonly DependencyProperty ParametersProperty =
-        DependencyProperty.Register(nameof(Parameters), typeof(AnimationParameterCollection), typeof(XamlCompositionAnimationBase), new PropertyMetadata(null, (d,e) =>
+        DependencyProperty.Register(nameof(Parameters), typeof(CompositionParameterCollection), typeof(XamlCompositionAnimationBase), new PropertyMetadata(null, (d,e) =>
         {
             if (d is XamlCompositionAnimationBase x)
             {
-                if (e.OldValue is AnimationParameterCollection old)
+                if (e.OldValue is CompositionParameterCollection old)
                     x.ClearCollection(old);
 
-                if (e.NewValue is AnimationParameterCollection c)
+                if (e.NewValue is CompositionParameterCollection c)
                     x.SetCollection(c);
             }
         }));
@@ -2065,14 +1946,14 @@ public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompo
 
 
 
-    private void SetCollection(AnimationParameterCollection c)
+    private void SetCollection(CompositionParameterCollection c)
     {
         c.BindingUpdated -= ParameterBinding_Updated;
         c.BindingUpdated += ParameterBinding_Updated;
-        c.SetTarget(this.Animation);
+        c.SetTarget(this.Animation as CompositionObject);
     }
 
-    private void ClearCollection(AnimationParameterCollection old)
+    private void ClearCollection(CompositionParameterCollection old)
     {
         old.BindingUpdated -= ParameterBinding_Updated;
         old.SetTarget(null);
@@ -2149,7 +2030,7 @@ public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompo
 
         // Cannot play if parameters are not set
         if (Parameters
-                .OfType<AnimationParameterBase>()
+                .OfType<CompositionParameterBase>()
                 .Any(p => p.IsValid is false || p.GetValue(p.GetValueProperty()) is null))
             return;
 
@@ -2517,7 +2398,7 @@ public sealed partial class XAMLAnimationCollection : DependencyObjectCollection
     }
 }
 
-public sealed partial class AnimationParameterCollection : DependencyObjectCollection
+public sealed partial class CompositionParameterCollection : DependencyObjectCollection
 {
     /// <summary>
     /// Fires when a child parameter value is updated and has a live bindingmode
@@ -2526,53 +2407,58 @@ public sealed partial class AnimationParameterCollection : DependencyObjectColle
 
     // After a VectorChanged event we need to compare the current state of the collection
     // with the old collection so that we can call Detach on all removed items.
-    private List<AnimationParameterBase> _oldCollection { get; } = new();
+    private List<CompositionParameterBase> _oldCollection { get; } = [];
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AnimationReferenceCollection"/> class.
+    /// Initializes a new instance of the <see cref="CompositionParameterCollection"/> class.
     /// </summary>
-    public AnimationParameterCollection()
+    public CompositionParameterCollection()
     {
         this.VectorChanged += this.InternalVectorChanged;
     }
 
-    public ICompositionAnimationBase Target { get; private set; }
+    public CompositionObject Target { get; private set; }
 
-    public void SetTarget(ICompositionAnimationBase target)
+    public void SetTarget(CompositionObject target)
     {
         if (this.Target == target)
             return;
 
+        if ((target is CompositionPropertySet or ICompositionAnimationBase) is false)
+            throw new InvalidOperationException();
+
         // Detach old parameters
         if (this.Target is not null)
-            foreach (AnimationParameterBase item in this._oldCollection)
+            foreach (CompositionParameterBase item in this._oldCollection)
                 item.Detach();
 
         this.Target = target;
 
         // Attach new parameters
-        foreach (AnimationParameterBase item in this)
-            item.AttachTo(this.Target);
+        foreach (CompositionParameterBase item in this)
+            item.AttachTo(this.Target as CompositionObject);
 
         this._oldCollection.Clear();
-        this._oldCollection.AddRange(this.Cast<AnimationParameterBase>());
+        this._oldCollection.AddRange(this.Cast<CompositionParameterBase>());
     }
 
 
     private void InternalVectorChanged(IObservableVector<DependencyObject> sender, IVectorChangedEventArgs eventArgs)
     {
+        var target =  Target as CompositionObject;
+
         if (eventArgs.CollectionChange == CollectionChange.Reset)
         {
             // Stop all existing animations
 
-            foreach (AnimationParameterBase a in this._oldCollection)
+            foreach (CompositionParameterBase a in this._oldCollection)
                 a.Detach();
 
             this._oldCollection.Clear();
 
-            foreach (AnimationParameterBase a in this)
+            foreach (CompositionParameterBase a in this)
             {
-                a.AttachTo(Target);
+                a.AttachTo(target);
                 this._oldCollection.Add(a);
             }
 
@@ -2580,7 +2466,7 @@ public sealed partial class AnimationParameterCollection : DependencyObjectColle
         }
 
         int eventIndex = (int)eventArgs.Index;
-        AnimationParameterBase changedItem = this[eventIndex] as AnimationParameterBase;
+        CompositionParameterBase changedItem = this[eventIndex] as CompositionParameterBase;
 
         switch (eventArgs.CollectionChange)
         {
@@ -2588,12 +2474,12 @@ public sealed partial class AnimationParameterCollection : DependencyObjectColle
 
                 this._oldCollection.Insert(eventIndex, changedItem);
                 this.VerifiedAttach(changedItem);
-                changedItem.AttachTo(Target);
+                changedItem.AttachTo(target);
 
                 break;
 
             case CollectionChange.ItemChanged:
-                AnimationParameterBase oldItem = this._oldCollection[eventIndex];
+                CompositionParameterBase oldItem = this._oldCollection[eventIndex];
 
                 oldItem.Detach();
                 this._oldCollection[eventIndex] = changedItem;
@@ -2614,9 +2500,9 @@ public sealed partial class AnimationParameterCollection : DependencyObjectColle
         }
     }
 
-    private AnimationParameterBase VerifiedAttach(DependencyObject item)
+    private CompositionParameterBase VerifiedAttach(DependencyObject item)
     {
-        AnimationParameterBase animation = item as AnimationParameterBase;
+        CompositionParameterBase animation = item as CompositionParameterBase;
         if (animation == null)
         {
             throw new InvalidOperationException("NonAnimationParameterAddedToAnimationParameterCollection");
@@ -2633,7 +2519,7 @@ public sealed partial class AnimationParameterCollection : DependencyObjectColle
         return animation;
     }
 
-    void Detach(AnimationParameterBase item)
+    void Detach(CompositionParameterBase item)
     {
         item.Detach();
         item.Updated -= Item_Updated;
@@ -2648,7 +2534,7 @@ public sealed partial class AnimationParameterCollection : DependencyObjectColle
 /// <summary>
 /// OneWay binds a value of a DependencyProperty to a UIElement's own CompositionPropertySet
 /// </summary>
-[DependencyProperty<string>("Key")]
+[DependencyProperty<string>("Key", "null")]
 [DependencyProperty<DependencyProperty>("Property")]
 public partial class DPBinderBase : DependencyObject
 {
@@ -2701,6 +2587,8 @@ public partial class DPBinderBase : DependencyObject
 
     }
 
+    partial void OnKeyChanged(string o, string n) { /* .NET Native wants to die */ }
+
     public void Attach(DependencyObject obj)
     {
         // Get the correct target
@@ -2737,7 +2625,6 @@ public partial class DPBinderBase : DependencyObject
     TokenRef GetExistingRef(DependencyObject obj)
         => _tokens.FirstOrDefault(f =>
             f.Reference.TryGetTarget(out DependencyObject t) && t == obj);
-
 
     void UpdateValue(DependencyObject obj, DependencyProperty dp = null)
     {
@@ -2784,9 +2671,9 @@ public sealed partial class PropertyBinderCollection : DependencyObjectCollectio
 {
     // After a VectorChanged event we need to compare the current state of the collection
     // with the old collection so that we can call Detach on all removed items.
-    private List<DPBinderBase> _oldCollection { get; } = new();
+    private List<DPBinderBase> _oldCollection { get; } = [];
 
-    private List<WeakReference<DependencyObject>> _associated { get; } = new();
+    private List<WeakReference<DependencyObject>> _associated { get; } = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="XAMLAnimationCollection"/> class.

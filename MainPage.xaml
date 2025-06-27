@@ -28,13 +28,17 @@
             We can't make this in the Style property setter as x:Bind
             does not work inside property setters :')
         -->
+        <!--
+            Automatically insert Margin & Value values from a Slider into the Slider's
+            hand-off Visual's Visual.Properties PropertySet;
+        -->
         <c:PropertyBinderCollection x:Name="SliderBinders">
             <c:DPBinderBase Key="Margin" Property="{x:Bind wuxc:Slider.MarginProperty}" />
             <c:DPBinderBase Key="Value" Property="{x:Bind wuxc:Slider.ValueProperty}" />
         </c:PropertyBinderCollection>
 
         <Style TargetType="Slider">
-            <Setter Property="c:Composition.PropertyBinders" Value="{StaticResource SliderBinders}" />
+            <Setter Property="c:CompositionProperty.PropertyBinders" Value="{StaticResource SliderBinders}" />
         </Style>
     </Page.Resources>
 
@@ -51,8 +55,8 @@
                         </Grid.Background>
 
 
-                        <StackPanel c:CompositionFactory.EnableDepthMatrix="True" Spacing="12">
-                            <c:Composition.Animations>
+                        <StackPanel c:Properties.EnableDepthMatrix="True" Spacing="12">
+                            <c:CompositionProperty.Animations>
                                 <!--
                                     As you scroll the ScrollViewer the content will not move as
                                     we bind it to the opposite of the ScrollViewer translation
@@ -60,7 +64,7 @@
                                 <c:XAMLExpressionAnimation Expression="Vector3(-scroll.Translation.X, -scroll.Translation.Y, 0)" Target="Translation">
                                     <c:ScrollManipulationSetParameter Key="scroll" Element="{x:Bind Scroller}" />
                                 </c:XAMLExpressionAnimation>
-                            </c:Composition.Animations>
+                            </c:CompositionProperty.Animations>
                             <Slider
                                 x:Name="Slider"
                                 Margin="4,0"
@@ -105,7 +109,7 @@
                                     <c:AmbLight />
                                     <c:SimpleSpotLight x:Name="Spotlight" />
                                 </Border.Lights>
-                                <c:Composition.Animations>
+                                <c:CompositionProperty.Animations>
                                     <c:CenterPointExpressionAnimation />
 
                                     <c:XAMLExpressionAnimation Expression="Vector3(0, slider.Value, 0)" Target="Translation">
@@ -137,7 +141,7 @@
                                         Target="D2C">
                                         <c:ElementVisualParameter Key="src" Element="{x:Bind Source}" />
                                     </c:XAMLExpressionAnimation>
-                                </c:Composition.Animations>
+                                </c:CompositionProperty.Animations>
                             </Border>
 
                             <ItemsControl ItemsSource="{c:IntSampleSource Count=20}">
@@ -151,7 +155,7 @@
                                                 <SolidColorBrush Opacity="0.7" Color="Red" />
                                             </Setter.Value>
                                         </Setter>
-                                        <Setter Property="c:Composition.Animations">
+                                        <Setter Property="c:CompositionProperty.Animations">
                                             <Setter.Value>
                                                 <c:XAMLAnimationCollection>
 
@@ -267,6 +271,16 @@
 
                         </c:XAMLAnimationCollection>
 
+                        <c:XAMLAnimationCollection x:Key="ScaleAnimations">
+                            <c:CenterPointExpressionAnimation />
+
+                            <c:XAMLExpressionAnimation Expression="Vector2(Lerp(0.8, 1.2, (p.Position.Y / src.Size.Y)), Lerp(0.8, 1.2, (p.Position.Y / src.Size.Y)))" Target="Scale.XY">
+                                <c:PointerSetParameter Key="p" Element="{x:Bind FlipSource}" />
+                                <c:ElementVisualParameter Key="src" Element="{x:Bind FlipSource}" />
+                            </c:XAMLExpressionAnimation>
+
+                        </c:XAMLAnimationCollection>
+
                         <brushes:TintedBlurBrush x:Name="BlurBrush" />
 
                     </Grid.Resources>
@@ -331,9 +345,16 @@
 
                     <ItemsControl Grid.Row="2" ItemsSource="{c:IntSampleSource Count=10}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid c:CompositionFactory.EnableDepthMatrix="True">
-
+                            <DataTemplate x:DataType="x:Int32">
+                                <Grid x:Name="Root" c:Properties.EnableDepthMatrix="True">
+                                    <c:CompositionProperty.PropertySetSetters>
+                                        <c:DoubleParameter Key="Index" Value="{x:Bind}" />
+                                    </c:CompositionProperty.PropertySetSetters>
+                                    <c:CompositionProperty.Animations>
+                                        <c:XAMLExpressionAnimation Expression="Vector3(0, p.Index * 5, 0)" Target="Translation">
+                                            <c:ElementVisualPropertySetParameter Key="p" Element="{Binding ElementName=Root}" />
+                                        </c:XAMLExpressionAnimation>
+                                    </c:CompositionProperty.Animations>
                                     <Grid
                                         Width="100"
                                         Height="50"
@@ -342,6 +363,7 @@
                                         <TextBlock
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
+                                            c:CompositionProperty.Animations="{StaticResource ScaleAnimations}"
                                             FontSize="24"
                                             FontWeight="ExtraBlack"
                                             Foreground="White"
@@ -352,7 +374,7 @@
                                     <Border
                                         Width="100"
                                         Height="50"
-                                        c:Composition.Animations="{StaticResource FlipAnimations}"
+                                        c:CompositionProperty.Animations="{StaticResource FlipAnimations}"
                                         c:VisualProperties.BackfaceVisibility="Visible"
                                         c:VisualProperties.RotationAxis="1 0 0"
                                         Background="{StaticResource BlurBrush}"

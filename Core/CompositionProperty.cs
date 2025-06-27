@@ -6,78 +6,182 @@ namespace XAMLComposition.Core;
 [Bindable]
 public static class CompositionProperty
 {
-    #region Attached Properties
+    #region Animations AttachedProperty
 
-    #region Scale
-
-    public static Point GetScale(DependencyObject obj)
+    public static XAMLAnimationCollection GetAnimations(DependencyObject obj)
     {
-        return (Point)obj.GetValue(ScaleProperty);
-    }
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj));
 
-    public static void SetScale(DependencyObject obj, Point value)
-    {
-        obj.SetValue(ScaleProperty, value);
-    }
-
-    public static readonly DependencyProperty ScaleProperty =
-        DependencyProperty.RegisterAttached("Scale", typeof(Point), typeof(CompositionProperty), new PropertyMetadata(new Point(1, 1), (d, e) =>
+        // Ensure there is always a collection when accessed via code
+        XAMLAnimationCollection collection = (XAMLAnimationCollection)obj.GetValue(AnimationsProperty);
+        if (collection == null)
         {
-            if (d is UIElement u && e.NewValue is Point p)
-            {
-                u.GetElementVisual().Scale = new(p.ToVector2(), 1);
-            }
-        }));
+            collection = new();
+            obj.SetValue(AnimationsProperty, collection);
+        }
 
-    #endregion
-
-    #region Center
-
-    public static Point GetCenter(DependencyObject obj)
-    {
-        return (Point)obj.GetValue(CenterProperty);
+        return collection;
     }
 
-    public static void SetCenter(DependencyObject obj, Point value)
+    public static void SetAnimations(DependencyObject obj, XAMLAnimationCollection value)
     {
-        obj.SetValue(CenterProperty, value);
-    }
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj));
+        obj.SetValue(AnimationsProperty, value);
 
-    public static readonly DependencyProperty CenterProperty =
-        DependencyProperty.RegisterAttached("Center", typeof(Point), typeof(CompositionProperty), new PropertyMetadata(new Point(0, 0), (d, e) =>
+        if (value is not null)
         {
-            if (d is UIElement u && e.NewValue is Point p)
+            value.Attach(obj);
+        }
+    }
+
+    public static readonly DependencyProperty AnimationsProperty =
+        DependencyProperty.RegisterAttached(
+            "Animations",
+            typeof(XAMLAnimationCollection),
+            typeof(CompositionProperty),
+            new PropertyMetadata(null, (s, e) =>
             {
-                CompositionFactory.StartCentering(u.GetElementVisual(), (float)p.X, (float)p.Y);
-            }
-        }));
+                if (e.NewValue == e.OldValue || s is not DependencyObject obj)
+                    return;
 
-    #endregion
+                if (e.OldValue is XAMLAnimationCollection old)
+                {
+                    if (s is FrameworkElement f)
+                    {
+                        f.Loaded -= Obj_Loaded;
+                        f.Unloaded -= Obj_Unloaded;
+                    }
 
-    #region Translation
+                    old.Detach(obj);
+                }
 
-    public static Point GetTranslation(DependencyObject obj)
+                if (e.NewValue is XAMLAnimationCollection collection)
+                {
+                    if (s is FrameworkElement f)
+                    {
+                        f.Loaded -= Obj_Loaded;
+                        f.Unloaded -= Obj_Unloaded;
+
+                        f.Loaded += Obj_Loaded;
+                        f.Unloaded += Obj_Unloaded;
+                    }
+
+                    collection.Attach(obj);
+                }
+            }));
+
+    private static void Obj_Loaded(object sender, RoutedEventArgs e)
     {
-        return (Point)obj.GetValue(TranslationProperty);
-    }
-
-    public static void SetTranslation(DependencyObject obj, Point value)
-    {
-        obj.SetValue(TranslationProperty, value);
-    }
-
-    public static readonly DependencyProperty TranslationProperty =
-        DependencyProperty.RegisterAttached("Translation", typeof(Point), typeof(CompositionProperty), new PropertyMetadata(new Point(0, 0), (d, e) =>
+        if (sender is FrameworkElement f)
         {
-            if (d is UIElement u && e.NewValue is Point p)
+            if (GetAnimations(f) is { } a)
+                a.Attach(f);
+        }
+    }
+
+    private static void Obj_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement f && GetAnimations(f) is { } a)
+            a.Detach(f);
+    }
+
+
+
+    #endregion
+
+
+    #region PropertyBinders
+
+    public static PropertyBinderCollection GetPropertyBinders(DependencyObject obj)
+    {
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj));
+
+        // Ensure there is always a collection when accessed via code
+        PropertyBinderCollection collection = (PropertyBinderCollection)obj.GetValue(PropertyBindersProperty);
+        if (collection == null)
+        {
+            collection = [];
+            obj.SetValue(PropertyBindersProperty, collection);
+        }
+
+        return collection;
+    }
+
+    public static void SetPropertyBinders(DependencyObject obj, PropertyBinderCollection value)
+    {
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj));
+        obj.SetValue(PropertyBindersProperty, value);
+        value?.Attach(obj);
+    }
+
+    public static readonly DependencyProperty PropertyBindersProperty =
+        DependencyProperty.RegisterAttached(
+            "PropertyBinders",
+            typeof(PropertyBinderCollection),
+            typeof(CompositionProperty),
+            new PropertyMetadata(null, (s, e) =>
             {
-                u.EnableCompositionTranslation()
-                 .GetElementVisual()
-                 .SetTranslation(new(p.ToVector2(), 0));
-            }
-        }));
+                if (e.NewValue == e.OldValue || s is not DependencyObject obj)
+                    return;
+
+                if (e.OldValue is PropertyBinderCollection old)
+                    old.Detach(obj);
+
+                if (e.NewValue is PropertyBinderCollection collection)
+                    collection.Attach(obj);
+            }));
 
     #endregion
 
+    #region PropertySetSetters
+
+    public static CompositionParameterCollection GetPropertySetSetters(DependencyObject obj)
+    {
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj));
+
+        // Ensure there is always a collection when accessed via code
+        CompositionParameterCollection collection = (CompositionParameterCollection)obj.GetValue(PropertySetSettersProperty);
+        if (collection == null)
+        {
+            collection = [];
+            obj.SetValue(PropertySetSettersProperty, collection);
+        }
+
+        return collection;
+    }
+
+    public static void SetPropertySetSetters(DependencyObject obj, CompositionParameterCollection value)
+    {
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj));
+        obj.SetValue(PropertySetSettersProperty, value);
+    }
+
+    public static readonly DependencyProperty PropertySetSettersProperty =
+        DependencyProperty.RegisterAttached(
+            "PropertySetSetters",
+            typeof(CompositionParameterCollection),
+            typeof(CompositionProperty),
+            new PropertyMetadata(null, (s, e) =>
+            {
+                if (e.NewValue == e.OldValue || s is not DependencyObject obj)
+                    return;
+
+                if (e.OldValue is CompositionParameterCollection old)
+                    old.SetTarget(null);
+
+                if (e.NewValue is CompositionParameterCollection collection)
+                {
+                    if (obj is UIElement element)
+                        collection.SetTarget(element.GetElementVisual().Properties);
+                }
+            }));
+
     #endregion
+
 }
