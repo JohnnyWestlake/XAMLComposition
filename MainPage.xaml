@@ -17,7 +17,7 @@
 
     <Page.Resources>
         <x:String x:Key="RotationExpression">
-            (p.Position.Y &lt; src.CenterPoint.Y) || (p.Position.X &gt; src.CenterPoint.X &amp;&amp; p.Position.Y == src.CenterPoint.Y) ? 45 * ((Clamp(Distance(src.CenterPoint, p.Position), 0, props.D2C) % props.D2C)/props.D2C) : (p.Position.Y &gt; src.CenterPoint.Y) || (p.Position.X &lt; src.CenterPoint.X &amp;&amp; p.Position.Y == src.CenterPoint.Y) ? -45 * ((Clamp(Distance(src.CenterPoint, p.Position), 0, props.D2C) % props.D2C)/props.D2C) : this.CurrentValue
+            (p.Position.Y &lt; src.CenterPoint.Y) || (p.Position.X &gt; src.CenterPoint.X &amp;&amp; p.Position.Y == src.CenterPoint.Y) ? TargetProps.Rotation * ((Clamp(Distance(src.CenterPoint, p.Position), 0, props.D2C) % props.D2C)/props.D2C) : (p.Position.Y &gt; src.CenterPoint.Y) || (p.Position.X &lt; src.CenterPoint.X &amp;&amp; p.Position.Y == src.CenterPoint.Y) ? -TargetProps.Rotation * ((Clamp(Distance(src.CenterPoint, p.Position), 0, props.D2C) % props.D2C)/props.D2C) : this.CurrentValue
         </x:String>
         <x:String x:Key="RotationAxisExpression">
             (p.Position.Y &lt; src.CenterPoint.Y &amp;&amp; p.Position.X &lt; src.CenterPoint.X) ? Vector3(-(-src.CenterPoint.Y + p.Position.Y), -src.CenterPoint .X + p.Position.X, 0) : (p.Position.Y &lt; src.CenterPoint.Y &amp;&amp; p.Position.X &gt; src.CenterPoint.X) ? Vector3(-(-src.CenterPoint.Y + p.Position.Y), p.Position.X - src.CenterPoint.X, 0) : (p.Position.Y &gt; src.CenterPoint.Y &amp;&amp; p.Position.X &lt; src.CenterPoint.X) ? Vector3((p.Position.Y - src.CenterPoint.Y), src.CenterPoint.X - p.Position.X, 0) : (p.Position.Y &gt; src.CenterPoint.Y &amp;&amp; p.Position.X &gt; src.CenterPoint.X) ? Vector3((p.Position.Y - src.CenterPoint.Y), -(p.Position.X - src.CenterPoint.X), 0) : (p.Position.Y == src.CenterPoint.Y &amp;&amp; p.Position.X != src.CenterPoint.X) ? Vector3(0, src.CenterPoint.X, 0) : (p.Position.Y != src.CenterPoint.Y &amp;&amp; p.Position.X == src.CenterPoint.X) ? Vector3(src.CenterPoint.Y, 0, 0) : this.CurrentValue
@@ -109,8 +109,25 @@
                                     <c:AmbLight />
                                     <c:SimpleSpotLight x:Name="Spotlight" />
                                 </Border.Lights>
+                                <c:CompositionProperty.PropertySetSetters>
+                                    <c:DoubleParameter Key="Rotation" Value="10" />
+                                </c:CompositionProperty.PropertySetSetters>
                                 <c:CompositionProperty.Animations>
                                     <c:CenterPointExpressionAnimation />
+
+                                    <c:XAMLExpressionAnimation
+                                        Expression="{StaticResource RotationExpression}"
+                                        Target="RotationAngleInDegrees"
+                                        UseTargetPropertySet="True">
+                                        <c:ElementVisualParameter Key="src" Element="{Binding ElementName=Source}" />
+                                        <c:ElementVisualPropertySetParameter Key="props" Element="{Binding ElementName=Source}" />
+                                        <c:PointerSetParameter Key="p" Element="{Binding ElementName=Source}" />
+                                    </c:XAMLExpressionAnimation>
+
+                                    <c:XAMLExpressionAnimation Expression="{StaticResource RotationAxisExpression}" Target="RotationAxis">
+                                        <c:ElementVisualParameter Key="src" Element="{Binding ElementName=Source}" />
+                                        <c:PointerSetParameter Key="p" Element="{Binding ElementName=Source}" />
+                                    </c:XAMLExpressionAnimation>
 
                                     <c:XAMLExpressionAnimation Expression="Vector3(0, slider.Value, 0)" Target="Translation">
                                         <c:ElementVisualPropertySetParameter Key="slider" Element="{x:Bind Slider2}" />
@@ -163,7 +180,10 @@
                                                         <c:ElementVisualPropertySetParameter Key="props" Element="{Binding ElementName=Source}" />
                                                     </c:XAMLExpressionAnimation>
 
-                                                    <c:XAMLExpressionAnimation Expression="Vector3(props.Value, props.Value, 1)" Target="Scale">
+                                                    <c:XAMLExpressionAnimation
+                                                        Expression="Mod(TargetProps.Index, 2) == 0 ? Vector3(props.Value, props.Value, 1) : Vector3(1,1,1)"
+                                                        Target="Scale"
+                                                        UseTargetPropertySet="True">
                                                         <c:ElementVisualPropertySetParameter Key="props" Element="{Binding ElementName=Slider3}" />
                                                     </c:XAMLExpressionAnimation>
 
@@ -184,7 +204,10 @@
 
                                                     <c:CenterPointExpressionAnimation />
 
-                                                    <c:XAMLExpressionAnimation Expression="{StaticResource RotationExpression}" Target="RotationAngleInDegrees">
+                                                    <c:XAMLExpressionAnimation
+                                                        Expression="{StaticResource RotationExpression}"
+                                                        Target="RotationAngleInDegrees"
+                                                        UseTargetPropertySet="True">
                                                         <c:ElementVisualParameter Key="src" Element="{Binding ElementName=Source}" />
                                                         <c:ElementVisualPropertySetParameter Key="props" Element="{Binding ElementName=Source}" />
                                                         <c:PointerSetParameter Key="p" Element="{Binding ElementName=Source}" />
@@ -239,8 +262,13 @@
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Style="{StaticResource Style}" />
+                                    <DataTemplate x:DataType="x:Int32">
+                                        <Border Style="{StaticResource Style}">
+                                            <c:CompositionProperty.PropertySetSetters>
+                                                <c:DoubleParameter Key="Rotation" Value="45" />
+                                                <c:DoubleParameter Key="Index" Value="{x:Bind}" />
+                                            </c:CompositionProperty.PropertySetSetters>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -271,19 +299,45 @@
 
                         </c:XAMLAnimationCollection>
 
-                        <c:XAMLAnimationCollection x:Key="ScaleAnimations">
+                        <c:XAMLAnimationCollection x:Key="TextAnimations">
                             <c:CenterPointExpressionAnimation />
 
-                            <c:XAMLExpressionAnimation Expression="Vector2(Lerp(0.8, 1.2, (p.Position.Y / src.Size.Y)), Lerp(0.8, 1.2, (p.Position.Y / src.Size.Y)))" Target="Scale.XY">
+                            <!--  Scale  -->
+                            <c:XAMLExpressionAnimation Expression="Vector2(Lerp(0.5, 1.2, (p.Position.Y / src.Size.Y)), Lerp(0.8, 1.2, (p.Position.Y / src.Size.Y)))" Target="Scale.XY">
+                                <c:PointerSetParameter Key="p" Element="{x:Bind FlipSource}" />
+                                <c:ElementVisualParameter Key="src" Element="{x:Bind FlipSource}" />
+                            </c:XAMLExpressionAnimation>
+
+                            <!--  Rotation  -->
+                            <c:XAMLExpressionAnimation
+                                Expression="Lerp(-68, 0, (p.Position.Y / src.Size.Y)) * (Mod(TargetProps.Index, 2) == 0 ? 1 : -1)"
+                                Target="RotationAngleInDegrees"
+                                UseTargetPropertySet="True">
                                 <c:PointerSetParameter Key="p" Element="{x:Bind FlipSource}" />
                                 <c:ElementVisualParameter Key="src" Element="{x:Bind FlipSource}" />
                             </c:XAMLExpressionAnimation>
 
                         </c:XAMLAnimationCollection>
 
+                        <c:XAMLAnimationCollection x:Key="ItemRotationAnimations">
+                            <c:CenterPointExpressionAnimation />
+                            <c:XAMLExpressionAnimation
+                                Expression="(TargetProps.Index + 1) * rotSlider.Value"
+                                Target="RotationAngleInDegrees"
+                                UseTargetPropertySet="True">
+                                <c:ElementVisualPropertySetParameter Key="rotSlider" Element="{Binding ElementName=RotSlider}" />
+                            </c:XAMLExpressionAnimation>
+                        </c:XAMLAnimationCollection>
+
                         <brushes:TintedBlurBrush x:Name="BlurBrush" />
 
                     </Grid.Resources>
+
+                    <Slider
+                        x:Name="RotSlider"
+                        Header="Rotation Dispersion (multiplied by item index)"
+                        Maximum="360"
+                        StepFrequency="0.001" />
 
                     <StackPanel
                         Grid.Row="1"
@@ -340,36 +394,37 @@
                         </Border>
                     </StackPanel>
 
-
-
-
                     <ItemsControl Grid.Row="2" ItemsSource="{c:IntSampleSource Count=10}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="x:Int32">
-                                <Grid x:Name="Root" c:Properties.EnableDepthMatrix="True">
+                                <Grid
+                                    x:Name="Root"
+                                    c:CompositionProperty.Animations="{StaticResource ItemRotationAnimations}"
+                                    c:Properties.EnableDepthMatrix="True">
                                     <c:CompositionProperty.PropertySetSetters>
                                         <c:DoubleParameter Key="Index" Value="{x:Bind}" />
                                     </c:CompositionProperty.PropertySetSetters>
-                                    <c:CompositionProperty.Animations>
-                                        <c:XAMLExpressionAnimation Expression="Vector3(0, p.Index * 5, 0)" Target="Translation">
-                                            <c:ElementVisualPropertySetParameter Key="p" Element="{Binding ElementName=Root}" />
-                                        </c:XAMLExpressionAnimation>
-                                    </c:CompositionProperty.Animations>
+
                                     <Grid
                                         Width="100"
                                         Height="50"
                                         Background="Red">
+                                        <Grid.Resources>
+                                            <c:CompositionParameterCollection x:Key="Collection">
+                                                <c:DoubleParameter Key="Index" Value="{x:Bind}" />
+                                            </c:CompositionParameterCollection>
+                                        </Grid.Resources>
 
                                         <TextBlock
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            c:CompositionProperty.Animations="{StaticResource ScaleAnimations}"
+                                            c:CompositionProperty.Animations="{StaticResource TextAnimations}"
+                                            c:CompositionProperty.PropertySetSetters="{StaticResource Collection}"
                                             FontSize="24"
                                             FontWeight="ExtraBlack"
                                             Foreground="White"
                                             Text="Hello!" />
                                     </Grid>
-
 
                                     <Border
                                         Width="100"

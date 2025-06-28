@@ -1727,7 +1727,7 @@ public abstract partial class CompositionParameterBase : DependencyObject, IEqua
 
 }
 
-[DependencyProperty<double>("Value", 0d, "Update")]
+[DependencyProperty<double>("Value", double.NaN, "Update")]
 public partial class DoubleParameter : CompositionParameterBase
 {
     public override DependencyProperty GetValueProperty() => ValueProperty;
@@ -1887,6 +1887,7 @@ public interface ICompositionAnimationTarget
 [ContentProperty(Name = nameof(Parameters))]
 [DependencyProperty<string>("Target")]
 [DependencyProperty<AnimationTarget>("AnimationTarget")]
+[DependencyProperty<bool>("UseTargetPropertySet", false, nameof(FireAnimationUpdated))] // If True, you can reference target Visuals PropertySet using "TargetProps" key
 public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompositionAnimationBase
 {
     public CompositionParameterCollection Parameters
@@ -2038,6 +2039,7 @@ public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompo
         if (Animation is CompositionAnimation ca && string.IsNullOrWhiteSpace(ca.Target))
             return;
 
+        
         if (AnimationTarget == AnimationTarget.CompositionObjectProperties)
         {
             /* 
@@ -2064,6 +2066,9 @@ public partial class XamlCompositionAnimationBase : DependencyObject, IXamlCompo
         }
         else if (AnimationTarget == AnimationTarget.CompositionObject)
         {
+            if (UseTargetPropertySet)
+                Animation.SetReferenceParameter("TargetProps", obj.Properties);
+
             obj.StartAnimation(Animation);
         }
     }
@@ -2424,7 +2429,7 @@ public sealed partial class CompositionParameterCollection : DependencyObjectCol
         if (this.Target == target)
             return;
 
-        if ((target is CompositionPropertySet or ICompositionAnimationBase) is false)
+        if ((target is CompositionPropertySet or ICompositionAnimationBase or null) is false)
             throw new InvalidOperationException();
 
         // Detach old parameters
