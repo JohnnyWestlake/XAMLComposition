@@ -75,7 +75,10 @@
                         </c:Composition.PropertyBinders>-->
                             </Slider>
 
-                            <Slider x:Name="Slider2" Maximum="40" />
+                            <Slider
+                                x:Name="Slider2"
+                                Maximum="40"
+                                StepFrequency="0.001" />
 
                             <Slider
                                 x:Name="Slider3"
@@ -129,7 +132,7 @@
                                         <c:PointerSetParameter Key="p" Element="{Binding ElementName=Source}" />
                                     </c:XAMLExpressionAnimation>
 
-                                    <c:XAMLExpressionAnimation Expression="Vector3(0, slider.Value, 0)" Target="Translation">
+                                    <c:XAMLExpressionAnimation Expression="Matrix4x4(Matrix3x2.CreateSkew(-slider.Value * 0.1, 0, Vector2(this.Target.Size.X /2, this.Target.Size.Y/2))) " Target="TransformMatrix">
                                         <c:ElementVisualPropertySetParameter Key="slider" Element="{x:Bind Slider2}" />
                                     </c:XAMLExpressionAnimation>
                                     <!--<c:XAMLExpressionAnimation
@@ -161,7 +164,7 @@
                                 </c:CompositionProperty.Animations>
                             </Border>
 
-                            <ItemsControl ItemsSource="{c:IntSampleSource Count=20}">
+                            <ItemsControl Margin="0,20,0,0" ItemsSource="{c:IntSampleSource Count=20}">
                                 <FrameworkElement.Resources>
                                     <Style x:Key="Style" TargetType="Border">
                                         <Setter Property="Width" Value="100" />
@@ -178,6 +181,19 @@
 
                                                     <c:XAMLExpressionAnimation Expression="props.Translation" Target="Translation">
                                                         <c:ElementVisualPropertySetParameter Key="props" Element="{Binding ElementName=Source}" />
+                                                    </c:XAMLExpressionAnimation>
+
+
+                                                    <!--
+                                                        Matrix4x4.CreateFromAxisAngle(Vector3 axis, Float angle)
+                                                    -->
+
+
+                                                    <c:XAMLExpressionAnimation
+                                                        Expression="Mod(TargetProps.Index, 2) == 0 ? Matrix4x4.CreateScale(Vector3(1,1,1)) : Matrix4x4.CreateTranslation(-this.Target.Size.X/2, -this.Target.Size.Y/2, 0) * Matrix4x4.CreateFromAxisAngle(Vector3(0,0,1), slider.Value) * Matrix4x4.CreateTranslation(this.Target.Size.X/2, this.Target.Size.Y/2, 0)"
+                                                        Target="TransformMatrix"
+                                                        UseTargetPropertySet="True">
+                                                        <c:ElementVisualPropertySetParameter Key="slider" Element="{Binding ElementName=Slider2}" />
                                                     </c:XAMLExpressionAnimation>
 
                                                     <c:XAMLExpressionAnimation
